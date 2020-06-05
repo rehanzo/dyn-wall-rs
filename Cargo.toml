@@ -1,0 +1,21 @@
+[package]
+name = "dyn-wall-rs"
+version = "1.0.0"
+authors = ["RAR27"]
+edition = "2018"
+license = "GPL-3.0-or-later"
+description = "Helps user set a dynamic wallpaper and lockscreen. For more info and help, go to https://github.com/RAR27/dyn-wall-rs"
+repository = "https://github.com/RAR27/dyn-wall-rs"
+readme = "README.md"
+keywords = ["dynamic", "wallpaper"]
+categories = ["command-line-utilities"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+chrono = "0.4"
+clokwerk = "0.3.0"
+walkdir = "2"
+alphanumeric-sort = "1.0.13"
+clap = "2.33.1"
+dirs = "2.0.2"
