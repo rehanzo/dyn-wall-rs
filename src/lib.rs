@@ -240,7 +240,7 @@ fn error_checking(
 ) -> Result<Time, Box<dyn Error>> {
     let times_iter_err = times.iter();
     let full_time = Time::new(24 * 60);
-    let start_range = times.iter().next().unwrap();
+    let start_range = times.iter().next().ok_or(Errors::ConfigFileError(ConfigFileErrors::Empty))?;
     let mut start_range_other = times.iter().next().unwrap();
     let mut curr_range = start_range.to_owned();
     let mut curr_range_other = start_range.to_owned();
