@@ -32,7 +32,7 @@ pub mod time_track;
 fn main() {
     let mut program = Arc::new(None);
     let matches = App::new("dyn-wall-rs")
-        .version("1.0")
+        .version("1.0.1")
         .author("Rehan Rana <rehanalirana@tuta.io>")
         .about("Helps user set a dynamic wallpaper and lockscreen. Make sure the wallpapers are named in numerical order based on the order you want. For more info and help, go to https://github.com/RAR27/dyn-wall-rs")
         .setting(AppSettings::ArgRequiredElseHelp)
@@ -164,7 +164,7 @@ fn create_config() -> Result<(), Box<dyn Error>> {
         config_dir.to_str().unwrap()
     ))?;
     let default_test = "# Write down the times at which you want the wallpaper to change below\n\
-    # The times must be in chronological order
+    # The times must be in chronological order\n\
     # The number of images and the number of times should be equal\n\
     # ex:\n\
     # 00:00\n\
@@ -179,8 +179,8 @@ fn create_config() -> Result<(), Box<dyn Error>> {
     # 18:00\n\
     # 20:00\n\
     # 22:00\n\
-    # The times are linked to the files in numerical order. This means that in the example above,
-    # 1.png will be your wallpaper at 00:00, 2.png will be your wallpaper at 02:00, etc.
+    # The times are linked to the files in numerical order. This means that in the example above,\n\
+    # 1.png will be your wallpaper at 00:00, 2.png will be your wallpaper at 02:00, etc.\n\
     # The directory would need 12 images for this example to work, since there are 12 times stated";
 
     config_file.write_all(default_test.as_bytes())?;
