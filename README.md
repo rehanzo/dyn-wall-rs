@@ -1,5 +1,9 @@
 # dyn-wall-rs
 
+![GitHub](https://img.shields.io/github/license/RAR27/dyn-wall-rs)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/RAR27/dyn-wall-rs)
+![Crates.io](https://img.shields.io/crates/v/dyn-wall-rs)
+
 A utility to allow you to set a dynamic wallpaper, and more.\
  Written in rust.
 
