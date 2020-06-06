@@ -17,7 +17,7 @@ The aim of dyn-wall-rs is to provide users with a very simple and easy way to im
 
 ## Installation
 You can download the binary from the [releases][RELEASES] page but if you prefer, you can install through one of the methods listed below
-**NOTE: [Feh](https://feh.finalrewind.org/) needs to be installed for this to work**
+**NOTE: [Feh](https://feh.finalrewind.org/) needs to be installed and able to change your wallpaper. Support for DE's who's wallpapers cannot be changes with Feh coming soon**
 
 ### Cargo
 First, install rust, and then run the following command:\
@@ -58,6 +58,7 @@ Once you figure out which options you want to use and test it to make sure its w
 
 ## Planned Feature(s)
   * Ability to send multiple commands with the lockscreen argument, so you can do something like have dyn-wall-rs send the image path to pywall as well as betterlockscreen
+  * Support for DE's that cannot use Feh to change their background
 
 [RELEASES]: https://github.com/RAR27/dyn-wall-rs/releases
 [DEMO]: https://raw.githubusercontent.com/RAR27/dyn-wall-rs/master/demo.gif 
