@@ -20,10 +20,13 @@
 use crate::time_track::Time;
 use chrono::{Local, Timelike};
 use clokwerk::{Scheduler, TimeUnits};
-use std::{error::Error, process, process::Command, sync::Arc, thread::sleep, time::Duration};
+use std::{error::Error, process, process::Command, sync::Arc, thread::sleep, time::Duration, env};
 use walkdir::{IntoIter, WalkDir};
+use run_script;
 
 use crate::errors::{ConfigFileErrors, Errors};
+use unicase::UniCase;
+use run_script::ScriptOptions;
 
 pub mod errors;
 pub mod time_track;
@@ -50,8 +53,6 @@ pub fn wallpaper_current_time(
         .unwrap()
         .map_err(|_| Errors::DirNonExistantError(dir.to_string()))?;
 
-    let mut feh_handle = Command::new("feh");
-    let feh_handle = feh_handle.arg("--bg-scale");
     let mut prog_handle: Command = Command::new("");
     let mut times_iter = times.iter();
     let curr_time = Time::new(Local::now().hour() * 60 + Local::now().minute());
@@ -85,7 +86,6 @@ pub fn wallpaper_current_time(
                 Some(filepath) => Ok(filepath),
                 None => Err(Errors::FilePathError),
             }?);
-            feh_handle.arg(&filepath_set);
 
             //this is to send the file as an argument to the user specified program, if one was specified
             prog_handle_loader(&filepath_set, Arc::clone(&program), &mut prog_handle);
@@ -99,16 +99,14 @@ pub fn wallpaper_current_time(
     //what we want in this situation is for the file that is associated with the last time of the day to be sent as an argument to feh,
     //and to the user specified program
     if filepath_set.is_empty() {
-        feh_handle.arg(&last_image);
+        de_command_spawn(&last_image)?;
 
         prog_handle_loader(&last_image, Arc::clone(&program), &mut prog_handle);
         filepath_set = last_image;
     }
-
-    feh_handle
-        .spawn()
-        .map_err(|_| Errors::ProgramRunError(String::from("feh")))?;
-    println!("The image {} has been set as your wallpaper", filepath_set);
+    else {
+        de_command_spawn(&filepath_set)?;
+    }
 
     if let Some(prog) = program.as_deref() {
         prog_handle
@@ -273,4 +271,67 @@ fn error_checking(
         return Err(Errors::CountCompatError(dir_count).into());
     };
     Ok(*loop_time)
+}
+
+fn de_command_spawn(filepath_set: &String) -> Result<(), Box<dyn Error>> {
+    let gnome = vec![UniCase::new("pantheon"), UniCase::new("gnome"), UniCase::new("gnome-xorg"), UniCase::new("ubuntu"), UniCase::new("deepin"), UniCase::new("pop")];
+    let mate = UniCase::new("mate");
+    let kde = vec![UniCase::new("plasma"), UniCase::new("neon"), UniCase::new("kde"), UniCase::new("/usr/share/xsessions/plasma")];
+    let lxde = UniCase::new("lxde");
+    let curr_de = env::var("XDG_CURRENT_DESKTOP");
+    let curr_de = match curr_de {
+        Err(_) => String::from("Other"),
+        Ok(de) => de,
+    };
+    let curr_de = UniCase::new(curr_de.as_str());
+    let mut feh_handle = Command::new("feh");
+    let feh_handle = feh_handle.arg("--bg-scale")
+        .arg(filepath_set);
+
+    //Pantheon, Gnome, Ubuntu, Deepin, Pop
+    let mut gnome_handle = Command::new("gsettings");
+    let gnome_handle = gnome_handle
+        .arg("set")
+        .arg("org.gnome.desktop.background")
+        .arg("picture-uri")
+        .arg(format!("'file://{}'", filepath_set));
+
+    //kde
+    let kde_script_end = r#"')
+        }""#;
+    let kde_script_beg = r#"
+qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "
+    var allDesktops = desktops();
+    print (allDesktops);
+    for (i=0;i<allDesktops.length;i++) {
+        d = allDesktops[i];
+        d.wallpaperPlugin = 'org.kde.image';
+        d.currentConfigGroup = Array('Wallpaper',
+                                    'org.kde.image',
+                                    'General');
+        d.writeConfig('Image', 'file://"#;
+    let kde_script = format!("{}{}{}", kde_script_beg, filepath_set, kde_script_end);
+
+    //lxde
+    let mut lxde_handle = Command::new("pcmanfm");
+    let lxde_handle = lxde_handle
+        .arg("--set-wallpaper")
+        .arg(filepath_set);
+
+    //mate
+    let mut mate_handle = Command::new("gsettings set org.mate.background picture-filename");
+    let mate_handle = mate_handle
+        .arg("set")
+        .arg("org.mate.background")
+        .arg("picture-uri")
+        .arg(format!("'file://{}'", filepath_set));
+
+    if gnome.contains(&curr_de) { gnome_handle.spawn().map_err(|_|Errors::ProgramRunError(String::from("Gnome Wallpaper Adjuster")))?; }
+    else if lxde == curr_de { lxde_handle.spawn().map_err(|_|Errors::ProgramRunError(String::from("LXDE Wallpaper Adjuster")))?; }
+    else if mate == curr_de { mate_handle.spawn().map_err(|_|Errors::ProgramRunError(String::from("Mate Wallpaper Adjuster")))?; }
+    else if kde.contains(&curr_de) { run_script::run(kde_script.as_str(), &vec![], &ScriptOptions::new()).map_err(|_|Errors::ProgramRunError(String::from("KDE Wallpaper Adjuster")))?; }
+    else { feh_handle.spawn().map_err(|_|Errors::ProgramRunError(String::from("Feh")))?; };
+
+    println!("{} has been set as your wallpaper", filepath_set);
+    Ok(())
 }
