@@ -49,7 +49,7 @@ There are a few different ways to use dyn-wall-rs using the different flags, whi
 
   * **-l, --lockscreen \<COMMAND>**\
     To have your lockscreen change as well, figure out the command that changes your lockscreen image. This command varies depending on your lockscreen. The command doesn't necessarily have to be a lockscreen command. You can use whatever command you want and have dyn-wall-rs send the wallpaper as an argument (ex. pywal). If the command includes arguments, wrap it in quotation marks.\
-    ex. dyn-wall-rs -a /path/to/dir/ -l "betterlockscreen -u"
+    ex. `dyn-wall-rs -a /path/to/dir/ -l "betterlockscreen -u"`
 
   * **-s, --schedule \<DIRECTORY>**\
     Prints out a schedule of the times at which the wallpaper would change if the auto option were to be used
