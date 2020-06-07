@@ -33,18 +33,10 @@ pub struct Time {
 
 impl Time {
     pub fn new(total_mins: u32) -> Self {
-        let mut hours = 0;
-        let mut mins = total_mins;
-
-        while mins >= 60 {
-            hours += 1;
-            mins -= 60;
-        }
-
         Time {
             total_mins,
-            hours,
-            mins,
+            hours: total_mins / 60,
+            mins: total_mins % 60,
         }
     }
 
