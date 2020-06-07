@@ -275,8 +275,10 @@ fn error_checking(
     Ok(*loop_time)
 }
 #[cfg(any(windows, target_os="macos"))]
-fn de_command_spawn(filepath_set: &str) -> Result<(), errors::Errors> {
-    wallpaper::set_from_path(filepath_set).map_err(|_|Errors::ProgramRunError(String::from("Windows Wallpaper Adjuster")))
+fn de_command_spawn(filepath_set: &str) -> Result<(), Box<dyn Error>> {
+    wallpaper::set_from_path(filepath_set).map_err(|_|Errors::ProgramRunError(String::from("Windows Wallpaper Adjuster")))?;
+    println!("{} has been set as your wallpaper", filepath_set);
+    Ok(())
 }
 
 #[cfg(not(any(windows, target_os="macos")))]
