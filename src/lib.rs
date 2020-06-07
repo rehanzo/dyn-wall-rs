@@ -27,10 +27,9 @@ use crate::errors::{ConfigFileErrors, Errors};
 use unicase::UniCase;
 use run_script::ScriptOptions;
 
-#[cfg(any(windows, target_os="macos"))] use wallpaper;
 #[cfg(windows)] use std::ffi::OsStr;
-#[cfg(windows)] use std::{ io, iter, mem, os::raw::c_void, os::windows::ffi::OsStrExt };
-#[cfg(windows)] use winapi::um::winuser::{ SPI_SETDESKWALLPAPER, SPI_GETDESKWALLPAPER, SSPIF_UPDATEINIFILE, PIF_SENDCHANGE, SystemParametersInfoW };
+#[cfg(windows)] use std::{ io, iter, os::raw::c_void, os::windows::ffi::OsStrExt };
+#[cfg(windows)] use winapi::um::winuser::{ SPI_SETDESKWALLPAPER, SPIF_UPDATEINIFILE, SPIF_SENDCHANGE, SystemParametersInfoW };
 
 pub mod errors;
 pub mod time_track;
@@ -299,6 +298,7 @@ fn de_command_spawn(filepath_set: &str) -> Result<(), Box<dyn Error>> {
     }
 }
 
+#[cfg(not(windows))]
 fn de_command_spawn(filepath_set: &str) -> Result<(), Box<dyn Error>> {
     let gnome = vec![UniCase::new("pantheon"), UniCase::new("gnome"), UniCase::new("gnome-xorg"), UniCase::new("ubuntu"), UniCase::new("deepin"), UniCase::new("pop"), UniCase::new("ubuntu:gnome")];
     let mate = UniCase::new("mate");
