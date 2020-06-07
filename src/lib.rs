@@ -22,7 +22,6 @@ use chrono::{Local, Timelike};
 use clokwerk::{Scheduler, TimeUnits};
 use std::{error::Error, process, process::Command, sync::Arc, thread::sleep, time::Duration, env};
 use walkdir::{IntoIter, WalkDir};
-use run_script;
 
 use crate::errors::{ConfigFileErrors, Errors};
 use unicase::UniCase;
@@ -273,17 +272,20 @@ fn error_checking(
     Ok(*loop_time)
 }
 
-fn de_command_spawn(filepath_set: &String) -> Result<(), Box<dyn Error>> {
-    let gnome = vec![UniCase::new("pantheon"), UniCase::new("gnome"), UniCase::new("gnome-xorg"), UniCase::new("ubuntu"), UniCase::new("deepin"), UniCase::new("pop")];
+fn de_command_spawn(filepath_set: &str) -> Result<(), Box<dyn Error>> {
+    let gnome = vec![UniCase::new("pantheon"), UniCase::new("gnome"), UniCase::new("gnome-xorg"), UniCase::new("ubuntu"), UniCase::new("deepin"), UniCase::new("pop"), UniCase::new("ubuntu:gnome")];
     let mate = UniCase::new("mate");
     let kde = vec![UniCase::new("plasma"), UniCase::new("neon"), UniCase::new("kde"), UniCase::new("/usr/share/xsessions/plasma")];
     let lxde = UniCase::new("lxde");
+    let xfce = vec![UniCase::new("xfce"), UniCase::new("xubuntu"), UniCase::new("xfce session")];
+
     let curr_de = env::var("XDG_CURRENT_DESKTOP");
     let curr_de = match curr_de {
         Err(_) => String::from("Other"),
         Ok(de) => de,
     };
     let curr_de = UniCase::new(curr_de.as_str());
+
     let mut feh_handle = Command::new("feh");
     let feh_handle = feh_handle.arg("--bg-scale")
         .arg(filepath_set);
@@ -297,8 +299,6 @@ fn de_command_spawn(filepath_set: &String) -> Result<(), Box<dyn Error>> {
         .arg(format!("'file://{}'", filepath_set));
 
     //kde
-    let kde_script_end = r#"')
-        }""#;
     let kde_script_beg = r#"
 qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "
     var allDesktops = desktops();
@@ -310,6 +310,8 @@ qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "
                                     'org.kde.image',
                                     'General');
         d.writeConfig('Image', 'file://"#;
+    let kde_script_end = r#"')
+        }""#;
     let kde_script = format!("{}{}{}", kde_script_beg, filepath_set, kde_script_end);
 
     //lxde
@@ -326,10 +328,17 @@ qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "
         .arg("picture-uri")
         .arg(format!("'file://{}'", filepath_set));
 
+    let xfce_script_beg = r#"xfconf-query -c xfce4-desktop \
+-p /backdrop/screen0/monitor0/workspace0/last-image \
+-s ""#;
+    let xfce_script_end = r#"""#;
+    let xfce_script = format!("{}{}{}", xfce_script_beg, filepath_set, xfce_script_end);
+
     if gnome.contains(&curr_de) { gnome_handle.spawn().map_err(|_|Errors::ProgramRunError(String::from("Gnome Wallpaper Adjuster")))?; }
     else if lxde == curr_de { lxde_handle.spawn().map_err(|_|Errors::ProgramRunError(String::from("LXDE Wallpaper Adjuster")))?; }
     else if mate == curr_de { mate_handle.spawn().map_err(|_|Errors::ProgramRunError(String::from("Mate Wallpaper Adjuster")))?; }
     else if kde.contains(&curr_de) { run_script::run(kde_script.as_str(), &vec![], &ScriptOptions::new()).map_err(|_|Errors::ProgramRunError(String::from("KDE Wallpaper Adjuster")))?; }
+    else if xfce.contains(&curr_de) { run_script::run(xfce_script.as_str(), &vec![], &ScriptOptions::new()).map_err(|_|Errors::ProgramRunError(String::from("XFCE Wallpaper Adjuster")))?; }
     else { feh_handle.spawn().map_err(|_|Errors::ProgramRunError(String::from("Feh")))?; };
 
     println!("{} has been set as your wallpaper", filepath_set);
