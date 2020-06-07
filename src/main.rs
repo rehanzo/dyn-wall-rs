@@ -51,7 +51,7 @@ fn main() {
                 .short("c")
                 .long("custom")
                 .value_name("DIRECTORY")
-                .help("Changes wallpapers based on custom times set through a config file created at ~/.config/dyn-wall-rs/config")
+                .help("Changes wallpapers based on custom times set through a config file created at ~/.config/dyn-wall-rs/config for Unix systems and C:\Users\<USER NAME>\AppData\Roaming\dyn-wall-rs for Windows systems")
                 .takes_value(true)
         )
         .arg(
