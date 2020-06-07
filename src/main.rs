@@ -1,5 +1,5 @@
 /*
-    dyn-wall-rs 1.0
+    dyn-wall-rs 1.1.0
     Rehan Rana <rehanalirana@tuta.io>
     Helps user set a dynamic wallpaper and lockscreen. For more info and help, go to https://github.com/RAR27/dyn-wall-rs
     Copyright (C) 2020  Rehan Rana
@@ -32,7 +32,7 @@ pub mod time_track;
 fn main() {
     let mut program = Arc::new(None);
     let matches = App::new("dyn-wall-rs")
-        .version("1.0.1")
+        .version("1.1.0")
         .author("Rehan Rana <rehanalirana@tuta.io>")
         .about("Helps user set a dynamic wallpaper and lockscreen. Make sure the wallpapers are named in numerical order based on the order you want. For more info and help, go to https://github.com/RAR27/dyn-wall-rs")
         .setting(AppSettings::ArgRequiredElseHelp)

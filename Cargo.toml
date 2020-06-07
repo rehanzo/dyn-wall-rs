@@ -1,6 +1,6 @@
 [package]
 name = "dyn-wall-rs"
-version = "1.0.1"
+version = "1.1.0"
 authors = ["RAR27"]
 edition = "2018"
 license = "GPL-3.0-or-later"
