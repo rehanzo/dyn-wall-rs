@@ -56,9 +56,20 @@ There are a few different ways to use dyn-wall-rs using the different flags, whi
 
 Once you figure out which options you want to use and test it to make sure its working how you want it to, have the command autostart on boot.
 
+## Supported Desktop Environments
+  * Windows
+  * Gnome
+  * Ubuntu
+  * Pantheon
+  * Deepin
+  * Pop
+  * KDE
+  * LXDE
+  * XFCE
+  * Window Managers that can have their wallpaper set using Feh
+
 ## Planned Feature(s)
   * Ability to send multiple commands with the lockscreen argument, so you can do something like have dyn-wall-rs send the image path to pywall as well as betterlockscreen
-  * Support for DE's that cannot use Feh to change their background
 
 [RELEASES]: https://github.com/RAR27/dyn-wall-rs/releases
 [DEMO]: https://raw.githubusercontent.com/RAR27/dyn-wall-rs/master/demo.gif 
