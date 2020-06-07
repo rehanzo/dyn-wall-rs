@@ -27,6 +27,10 @@ use crate::errors::{ConfigFileErrors, Errors};
 use unicase::UniCase;
 use run_script::ScriptOptions;
 
+#[cfg(windows)] use std::ffi::OsStr;
+#[cfg(windows)] use std::{ io, iter, os::raw::c_void, os::windows::ffi::OsStrExt };
+#[cfg(windows)] use winapi::um::winuser::{ SPI_SETDESKWALLPAPER, SPIF_UPDATEINIFILE, SPIF_SENDCHANGE, SystemParametersInfoW };
+
 pub mod errors;
 pub mod time_track;
 
@@ -271,7 +275,30 @@ fn error_checking(
     };
     Ok(*loop_time)
 }
+#[cfg(windows)]
+fn de_command_spawn(filepath_set: &str) -> Result<(), Box<dyn Error>> {
+    unsafe {
+        let filepath_set = OsStr::new(filepath_set)
+            .encode_wide()
+            // append null byte
+            .chain(iter::once(0))
+            .collect::<Vec<u16>>();
+        let successful = SystemParametersInfoW(
+            SPI_SETDESKWALLPAPER,
+            0,
+            filepath_set.as_ptr() as *mut c_void,
+            SPIF_UPDATEINIFILE | SPIF_SENDCHANGE,
+        ) == 1;
 
+        if successful {
+            Ok(())
+        } else {
+            Err(io::Error::last_os_error().into())
+        }
+    }
+}
+
+#[cfg(not(windows))]
 fn de_command_spawn(filepath_set: &str) -> Result<(), Box<dyn Error>> {
     let gnome = vec![UniCase::new("pantheon"), UniCase::new("gnome"), UniCase::new("gnome-xorg"), UniCase::new("ubuntu"), UniCase::new("deepin"), UniCase::new("pop"), UniCase::new("ubuntu:gnome")];
     let mate = UniCase::new("mate");
@@ -331,14 +358,21 @@ qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "
     let xfce_script_beg = r#"xfconf-query -c xfce4-desktop \
 -p /backdrop/screen0/monitor0/workspace0/last-image \
 -s ""#;
+    let xfce_script_alt_beg = r#"xfconf-query -c xfce4-desktop \
+-p /backdrop/screen0/monitor0/workspace0/last-image \
+-s ""#;
     let xfce_script_end = r#"""#;
     let xfce_script = format!("{}{}{}", xfce_script_beg, filepath_set, xfce_script_end);
+    let xfce_script_alt = format!("{}{}{}", xfce_script_alt_beg, filepath_set, xfce_script_end);
 
     if gnome.contains(&curr_de) { gnome_handle.spawn().map_err(|_|Errors::ProgramRunError(String::from("Gnome Wallpaper Adjuster")))?; }
     else if lxde == curr_de { lxde_handle.spawn().map_err(|_|Errors::ProgramRunError(String::from("LXDE Wallpaper Adjuster")))?; }
     else if mate == curr_de { mate_handle.spawn().map_err(|_|Errors::ProgramRunError(String::from("Mate Wallpaper Adjuster")))?; }
     else if kde.contains(&curr_de) { run_script::run(kde_script.as_str(), &vec![], &ScriptOptions::new()).map_err(|_|Errors::ProgramRunError(String::from("KDE Wallpaper Adjuster")))?; }
-    else if xfce.contains(&curr_de) { run_script::run(xfce_script.as_str(), &vec![], &ScriptOptions::new()).map_err(|_|Errors::ProgramRunError(String::from("XFCE Wallpaper Adjuster")))?; }
+    else if xfce.contains(&curr_de) {
+        run_script::run(xfce_script.as_str(), &vec![], &ScriptOptions::new()).map_err(|_|Errors::ProgramRunError(String::from("XFCE Wallpaper Adjuster")))?;
+        run_script::run(xfce_script_alt.as_str(), &vec![], &ScriptOptions::new()).map_err(|_|Errors::ProgramRunError(String::from("XFCE Wallpaper Adjuster")))?;
+    }
     else { feh_handle.spawn().map_err(|_|Errors::ProgramRunError(String::from("Feh")))?; };
 
     println!("{} has been set as your wallpaper", filepath_set);

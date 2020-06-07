@@ -159,6 +159,7 @@ dependencies = [
  "run_script",
  "unicase",
  "walkdir",
+ "winapi",
 ]
 
 [[package]]
