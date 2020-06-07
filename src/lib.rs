@@ -278,7 +278,7 @@ fn error_checking(
 #[cfg(windows)]
 fn de_command_spawn(filepath_set: &str) -> Result<(), Box<dyn Error>> {
     unsafe {
-        let filepath_set = OsStr::new(filepath_set)
+        let file = OsStr::new(filepath_set)
             .encode_wide()
             // append null byte
             .chain(iter::once(0))
@@ -286,11 +286,12 @@ fn de_command_spawn(filepath_set: &str) -> Result<(), Box<dyn Error>> {
         let successful = SystemParametersInfoW(
             SPI_SETDESKWALLPAPER,
             0,
-            filepath_set.as_ptr() as *mut c_void,
+            file.as_ptr() as *mut c_void,
             SPIF_UPDATEINIFILE | SPIF_SENDCHANGE,
         ) == 1;
 
         if successful {
+            println!("{} has been set as your wallpaper", filepath_set);
             Ok(())
         } else {
             Err(io::Error::last_os_error().into())
