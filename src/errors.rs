@@ -18,6 +18,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 use std::{error, fmt};
+use dirs::config_dir;
+
+#[cfg(not(windows))] const DIR_SLASH: &str = "/";
+#[cfg(windows)] const DIR_SLASH: &str = r#"\"#;
 
 #[derive(Debug)]
 ///Custom error types
@@ -66,7 +70,7 @@ impl fmt::Display for Errors {
                     ConfigFileErrors::Empty => write!(f, "{}: config file is empty", template),
                     ConfigFileErrors::FileTimeMismatch => write!(f, "{}: there are more files in the directory than time slots in the config file", template),
                     ConfigFileErrors::FormattingError => write!(f, "{}: config file not formatted correctly", template),
-                    ConfigFileErrors::NotFound => write!(f, "{}: config file not found. One has been created at ~/.config/dyn-wall-rs/config for you to edit", template),
+                    ConfigFileErrors::NotFound => write!(f, "{}: config file not found. One has been created at {}{}dyn-wall-rs{}config for you to edit", template, config_dir().expect("No config directory found").to_str().unwrap(), DIR_SLASH, DIR_SLASH),
                     ConfigFileErrors::OutOfOrder => write!(f, "{}: the order of the times are incorrect", template),
                     ConfigFileErrors::Other => write!(f, "{}", template),
                 }
