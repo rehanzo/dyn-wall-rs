@@ -27,8 +27,10 @@ use crate::errors::{ConfigFileErrors, Errors};
 use unicase::UniCase;
 use run_script::ScriptOptions;
 
-#[cfg(any(windows, target_os="macos"))]
-use wallpaper;
+#[cfg(any(windows, target_os="macos"))] use wallpaper;
+#[cfg(windows)] use std::ffi::OsStr;
+#[cfg(windows)] use std::{ io, iter, mem, os::raw::c_void, os::windows::ffi::OsStrExt };
+#[cfg(windows)] use winapi::um::winuser::{ SPI_SETDESKWALLPAPER, SPI_GETDESKWALLPAPER, SSPIF_UPDATEINIFILE, PIF_SENDCHANGE, SystemParametersInfoW };
 
 pub mod errors;
 pub mod time_track;
@@ -274,14 +276,29 @@ fn error_checking(
     };
     Ok(*loop_time)
 }
-#[cfg(any(windows, target_os="macos"))]
+#[cfg(windows)]
 fn de_command_spawn(filepath_set: &str) -> Result<(), Box<dyn Error>> {
-    wallpaper::set_from_path(filepath_set).map_err(|_|Errors::ProgramRunError(String::from("Windows Wallpaper Adjuster")))?;
-    println!("{} has been set as your wallpaper", filepath_set);
-    Ok(())
+    unsafe {
+        let filepath_set = OsStr::new(filepath_set)
+            .encode_wide()
+            // append null byte
+            .chain(iter::once(0))
+            .collect::<Vec<u16>>();
+        let successful = SystemParametersInfoW(
+            SPI_SETDESKWALLPAPER,
+            0,
+            filepath_set.as_ptr() as *mut c_void,
+            SPIF_UPDATEINIFILE | SPIF_SENDCHANGE,
+        ) == 1;
+
+        if successful {
+            Ok(())
+        } else {
+            Err(io::Error::last_os_error().into())
+        }
+    }
 }
 
-#[cfg(not(any(windows, target_os="macos")))]
 fn de_command_spawn(filepath_set: &str) -> Result<(), Box<dyn Error>> {
     let gnome = vec![UniCase::new("pantheon"), UniCase::new("gnome"), UniCase::new("gnome-xorg"), UniCase::new("ubuntu"), UniCase::new("deepin"), UniCase::new("pop"), UniCase::new("ubuntu:gnome")];
     let mate = UniCase::new("mate");
