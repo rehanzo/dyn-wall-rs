@@ -27,8 +27,8 @@ use crate::errors::{ConfigFileErrors, Errors};
 use unicase::UniCase;
 use run_script::ScriptOptions;
 
-#[cfg(windows)] use std::ffi::CString;
-#[cfg(windows)] use std::os::raw::c_void;
+#[cfg(any(windows, target_os="macos"))]
+use wallpaper;
 
 pub mod errors;
 pub mod time_track;
@@ -274,37 +274,11 @@ fn error_checking(
     };
     Ok(*loop_time)
 }
-#[cfg(windows)]
+#[cfg(any(windows, target_os="macos"))]
 fn de_command_spawn(filepath_set: &str) -> Result<(), Box<dyn Error>> {
-    let wallpaper_func = if force_32bit || cfg!(target_pointer_width = "32") {
-        user32::SystemParametersInfoA
-    }
-    else {
-        user32::SystemParametersInfoW
-    };
-
-    // do work to get the pointer of our owned string
-    let path_ptr = CString::new(path).unwrap();
-    let path_ptr_c = path_ptr.into_raw();
-    let result = unsafe {
-        match path_ptr_c.is_null() {
-            false => wallpaper_func(20, 0, path_ptr_c as *mut c_void, 0),
-            true => 0
-        }
-    };
-
-    // rust documentation says we must return the pointer this way
-    unsafe {
-        CString::from_raw(path_ptr_c)
-    };
-
-    match result {
-        0 => Err(()),
-        _ => Ok(())
-    }
+    wallpaper::set_from_path(filepath_set).map_err(Errors::ProgramRunError(String::from("Windows Wallpaper Adjuster")))
 }
 
-#[cfg(not(windows))]
 fn de_command_spawn(filepath_set: &str) -> Result<(), Box<dyn Error>> {
     let gnome = vec![UniCase::new("pantheon"), UniCase::new("gnome"), UniCase::new("gnome-xorg"), UniCase::new("ubuntu"), UniCase::new("deepin"), UniCase::new("pop"), UniCase::new("ubuntu:gnome")];
     let mate = UniCase::new("mate");
