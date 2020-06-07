@@ -17,7 +17,7 @@ The aim of dyn-wall-rs is to provide users with a very simple and easy way to im
 
 ## Installation
 You can download the binary from the [releases][RELEASES] page but if you prefer, you can install through one of the methods listed below
-**NOTE: [Feh](https://feh.finalrewind.org/) needs to be installed and able to change your wallpaper. Support for DE's who's wallpapers cannot be changes with Feh coming soon**
+**NOTE: [Feh](https://feh.finalrewind.org/) needs to be installed if you are using a Window Manager**
 
 ### Cargo
 First, install rust, and then run the following command:\
@@ -45,7 +45,7 @@ There are a few different ways to use dyn-wall-rs using the different flags, whi
     For example if I have 12 wallpapers in my wallpaper directory, this option would change the wallpaper every 2 hours (24/12 = 2). Make sure the number of wallpapers in the directory can divide evenly into 1440 (number of minutes in a day). If it doesn't divide evenly into 1440, you may want to use the custom option.
 
   * **-c, --custom \<DIRECTORY>**\
-    Changes your wallpaper based on custom times set through the config file located at ~/.config/dyn-wall-rs/config. When this is run for the first time, it will automatically create the config file with detailed instructions on how to set your own times for your wallpaper to change.
+    Changes your wallpaper based on custom times set through the config file located at `~/.config/dyn-wall-rs/config` for Unix systems, and `C:\Users\<USER NAME>\AppData\Roaming\dyn-wall-rs` on Windows. When this is run for the first time, it will automatically create the config file with detailed instructions on how to set your own times for your wallpaper to change.
 
   * **-l, --lockscreen \<COMMAND>**\
     To have your lockscreen change as well, figure out the command that changes your lockscreen image. This command varies depending on your lockscreen. The command doesn't necessarily have to be a lockscreen command. You can use whatever command you want and have dyn-wall-rs send the wallpaper as an argument (ex. pywal). If the command includes arguments, wrap it in quotation marks.\
