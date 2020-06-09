@@ -35,7 +35,7 @@ To update after installation, run:\
       3. Compare the output of the command with the contents of the .sha256 file. If they are the same, then your file has not been tampered with
   3. Unpack the .tar.gz file by running\
 `tar -zxvf dyn-wall-rs.tar.gz`
-  4. You can now run it by running `./dyn-wall-rs` in the directory the binary was unpacked. It is recommended to place the binary in your $PATH, so you can use it from anywhere
+  4. You can now run it by running `./dyn-wall-rs` in the directory the binary was unpacked. It is recommended to place the binary in your $PATH (ex. `/usr/bin`, which is commonly used), so you can use it from anywhere
 
 #### Windows
   1. Download the latest binary from the [releases](RELEASES) page
