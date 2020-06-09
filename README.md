@@ -19,12 +19,21 @@ The aim of dyn-wall-rs is to provide users with a very simple and easy way to im
 You can download the binary from the [releases][RELEASES] page but if you prefer, you can install through one of the methods listed below
 **NOTE: [Feh](https://feh.finalrewind.org/) needs to be installed if you are using a Window Manager**
 
-### Cargo
-First, install rust, and then run the following command:\
-`cargo install dyn-wall-rs`
+### AUR
+For those using Arch Linux you can find the package on the AUR [here](https://aur.archlinux.org/packages/dyn-wall-rs/). However, if you're using an AUR helper, the package can be installed through that. For example, If using [yay](https://github.com/Jguer/yay), run the following command:
+```
+yay -S dyn-wall-rs
+```
 
-To update after installation, run:\
-`cargo install dyn-wall-rs --force`
+### Cargo
+First, install rust, and then run the following command:
+```
+cargo install dyn-wall-rs
+```
+To update after installation, run:
+```
+cargo install dyn-wall-rs --force
+```
 
 ### Manual
 #### Unix
