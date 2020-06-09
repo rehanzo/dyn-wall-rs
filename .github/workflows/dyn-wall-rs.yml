@@ -53,7 +53,7 @@ jobs:
         uses: actions/upload-artifact@v1
         with:
           name: dyn-wall-rs-linux.tar.gz
-          path: assets/*
+          path: assets/
 
   release-windows:
     needs: test
@@ -86,4 +86,4 @@ jobs:
         uses: actions/upload-artifact@v1
         with:
           name: dyn-wall-rs-windows.zip
-          path: assets\*
+          path: assets\
