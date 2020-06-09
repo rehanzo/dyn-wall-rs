@@ -47,7 +47,7 @@ jobs:
         run: tar -czvf assets/dyn-wall-rs-linux.tar.gz target/release/dyn-wall-rs
         
       - name: Find sha265sum
-        run: sha256sum assets/dyn-wall-rs-linux.tar.gz > return/dyn-wall-rs-linux.sha256
+        run: sha256sum assets/dyn-wall-rs-linux.tar.gz > assets/dyn-wall-rs-linux.sha256
         
       - name: Send tarball and sha256 back
         uses: actions/upload-artifact@v1
@@ -80,7 +80,7 @@ jobs:
         run: tar.exe -a -cf assets\dyn-wall-rs-windows.zip target\release\dyn-wall-rs.exe
 
       - name: Find sha265sum
-        run: CertUtil -hashfile assets\dyn-wall-rs-window.zip > assets\dyn-wall-rs-windows.sha256 SHA256
+        run: CertUtil -hashfile assets\dyn-wall-rs-window.zip SHA256 > assets\dyn-wall-rs-windows.sha256
       
       - name: Send zip back
         uses: actions/upload-artifact@v1
