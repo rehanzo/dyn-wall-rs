@@ -52,7 +52,7 @@ jobs:
       - name: Send tarball and sha256 back
         uses: actions/upload-artifact@v1
         with:
-          name: dyn-wall-rs-linux.tar.gz
+          name: assets-linux
           path: assets/
 
   release-windows:
@@ -80,10 +80,10 @@ jobs:
         run: tar.exe -a -cf assets\dyn-wall-rs-windows.zip target\release\dyn-wall-rs.exe
 
       - name: Find sha265sum
-        run: CertUtil -hashfile assets\dyn-wall-rs-window.zip SHA256 > assets\dyn-wall-rs-windows.sha256
-      
+        run: $(certutil -hashfile assets\dyn-wall-rs-window.zip SHA256)[1] -replace " ","" > assets\dyn-wall-rs-windows.sha256
+
       - name: Send zip back
         uses: actions/upload-artifact@v1
         with:
-          name: dyn-wall-rs-windows.zip
+          name: assets-windows
           path: assets\
