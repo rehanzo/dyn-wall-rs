@@ -71,7 +71,7 @@ jobs:
         run: cargo build --release
         
       - name: Pack into zip
-        run: tar.exe -a -c target\release\dyn-wall-rs-windows.zip target\release\dyn-wall-rs.exe
+        run: tar.exe -a -cf target\release\dyn-wall-rs-windows.zip target\release\dyn-wall-rs.exe
 
       - name: Find sha265sum
         run: sha256sum target\release\dyn-wall-rs-window.zip > target\release\dyn-wall-rs-windows.sha256
