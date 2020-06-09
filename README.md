@@ -40,10 +40,10 @@ cargo install dyn-wall-rs --force
 #### Unix
   1. Download the latest binary from the [releases](RELEASES) page
   2. (**Optional**) To ensure the file you downloaded is correct and was not tampered with, do the following:
-      1. Download the respective .sha256 file
-      2. Run `sha256sum` on the .tar.gz file
-      3. Compare the output of the command with the contents of the .sha256 file. If they are the same, then your file has not been tampered with
-  3. Unpack the .tar.gz file by running\
+      1. Download the respective `.sha256` file
+      2. Run `sha256sum` on the `.tar.gz` file
+      3. Compare the output of the command with the contents of the `.sha256` file. If they are the same, then your file has not been tampered with
+  3. Unpack the `.tar.gz file` by running\
 `tar -zxvf dyn-wall-rs.tar.gz`
   4. You can now run it by running `./dyn-wall-rs` in the directory the binary was unpacked. It is recommended to place the binary in your $PATH (ex. `/usr/bin`, which is commonly used), so you can use it from anywhere
 
@@ -51,8 +51,9 @@ cargo install dyn-wall-rs --force
   1. Download the latest binary from the [releases](RELEASES) page
   2. (**Optional**) To ensure the file you downloaded is correct and was not tampered with, do the following:
       1. Download the respective `.sha256` file
-      2. Use a hash checking tool to obtain the sha256sum of the `.zip` file
-      3. Compare the sha256sum the tool provides with the contents of the `.sha256` file. If they are the same, then your file has not been tampered with
+      2. Open PowerShell, move to the directory contining the zip, and run\
+      `Get-FileHash dyn-wall-rs-windows.zip -Algorithm SHA256 | Format-List`
+      3. Compare the sha256 the command provides with the contents of the `.sha256` file. If they are the same, then your file has not been tampered with
   3. Unzip the `.zip` file
   4. You can now run it by opening up PowerShell and running `./dyn-wall-rs` in the directory the binary was unpacked. It is recommended to place the binary in your $PATH, so you can use it from anywhere
 
