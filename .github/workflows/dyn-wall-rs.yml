@@ -76,20 +76,20 @@ jobs:
       - name: Build
         run: cargo build --release
         
-      - name: Pack into tarball
-        run: tar -czvf target/release/dyn-wall-rs-windows.tar.gz target/release/dyn-wall-rs
+      - name: Pack into zip
+        run: tar.exe -a -c target/release/dyn-wall-rs-windows.zip target/release/dyn-wall-rs.exe
 
       - name: Find sha265sum
-        run: sha256sum target/release/dyn-wall-rs-window.tar.gz > target/release/dyn-wall-rs-windows.sha256
+        run: sha256sum target/release/dyn-wall-rs-window.zip > target/release/dyn-wall-rs-windows.sha256
 
-      - name: Send tarball back
+      - name: Send zip back
         uses: actions/upload-artifact@v1
         with:
-          name: dyn-wall-rs-linux.tar.gz
-          path: target/release/dyn-wall-rs-windows.tar.gz          
+          name: dyn-wall-rs-windows.zip
+          path: target/release/dyn-wall-rs-windows.zip         
 
       - name: Send sha256 back
         uses: actions/upload-artifact@v1
         with:
-          name: dyn-wall-rs-linux.sha256
+          name: dyn-wall-rs-windows.sha256
           path: target/release/dyn-wall-rs-windows.sha256
