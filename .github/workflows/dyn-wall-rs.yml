@@ -43,6 +43,9 @@ jobs:
       - name: Make directory for assets
         run: mkdir assets
         
+      - name: Copy binary over
+        run: cp target/release/dyn-wall-rs .
+        
       - name: Pack into tarball
         run: tar -czvf assets/dyn-wall-rs-linux.tar.gz target/release/dyn-wall-rs
         
@@ -76,8 +79,11 @@ jobs:
       - name: Make directory for assets
         run: mkdir assets
         
-      - name: Pack into zip
-        run: tar.exe -a -cf assets\dyn-wall-rs-windows.zip target\release\dyn-wall-rs.exe
+      - name: Copy .exe over
+        run: Copy-Item -Path target\release\dyn-wall-rs.exe
+        
+      - name: zip .exe
+        run: tar.exe -a -cf assets\dyn-wall-rs-windows.zip dyn-wall-rs.exe
 
       - name: Find sha265sum
         run: Get-FileHash assets\dyn-wall-rs-windows.zip -Algorithm SHA256 | Format-List > assets/dyn-wall-rs-windows.sha256
