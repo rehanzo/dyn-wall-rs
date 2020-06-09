@@ -3,6 +3,7 @@
 ![GitHub](https://img.shields.io/github/license/RAR27/dyn-wall-rs)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/RAR27/dyn-wall-rs)](https://github.com/RAR27/dyn-wall-rs)
 [![Crates.io](https://img.shields.io/crates/v/dyn-wall-rs)](https://crates.io/crates/dyn-wall-rs)
+[![AUR](https://img.shields.io/aur/version/dyn-wall-rs)](https://aur.archlinux.org/packages/dyn-wall-rs/)
 
 A utility to allow you to set a dynamic wallpaper and more.\
  Written in rust.
