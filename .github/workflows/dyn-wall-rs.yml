@@ -1,0 +1,89 @@
+name: Test and build dyn-wall-rs for Linux and Windows
+
+on: push
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+    - name: Cache Deps
+      uses: actions/cache@v2.0.0
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        
+    - uses: actions/checkout@v2
+    - name: Run tests
+      run: cargo test --verbose
+
+  release-linux:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Cache Deps
+        uses: actions/cache@v2.0.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        
+      - name: Build
+        run: cargo build --release
+        
+      - name: Make directory for assets
+        run: mkdir assets
+        
+      - name: Pack into tarball
+        run: tar -czvf assets/dyn-wall-rs-linux.tar.gz target/release/dyn-wall-rs
+        
+      - name: Find sha265sum
+        run: sha256sum assets/dyn-wall-rs-linux.tar.gz > assets/dyn-wall-rs-linux.sha256
+        
+      - name: Send tarball and sha256 back
+        uses: actions/upload-artifact@v1
+        with:
+          name: assets-linux
+          path: assets/
+
+  release-windows:
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Cache Deps
+        uses: actions/cache@v2.0.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build
+        run: cargo build --release
+        
+      - name: Make directory for assets
+        run: mkdir assets
+        
+      - name: Pack into zip
+        run: tar.exe -a -cf assets\dyn-wall-rs-windows.zip target\release\dyn-wall-rs.exe
+
+      - name: Find sha265sum
+        run: Get-FileHash assets\dyn-wall-rs-windows.zip -Algorithm SHA256 | Format-List > assets/dyn-wall-rs-windows.sha256
+
+      - name: Send zip back
+        uses: actions/upload-artifact@v1
+        with:
+          name: assets-windows
+          path: assets\
