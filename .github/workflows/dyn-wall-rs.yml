@@ -1,0 +1,95 @@
+name: Test and build dyn-wall-rs for Linux and Windows
+
+on: push
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+    - name: Cache Deps
+      uses: actions/cache@v2.0.0
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        
+    - uses: actions/checkout@v2
+    - name: Run tests
+      run: cargo test --verbose
+
+  release-linux:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Cache Deps
+        uses: actions/cache@v2.0.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        
+      - name: Build
+        run: cargo build --release
+        
+      - name: Pack into tarball
+        run: tar -czvf target/release/dyn-wall-rs-linux.tar.gz target/release/dyn-wall-rs
+        
+      - name: Find sha265sum
+        run: sha256sum target/release/dyn-wall-rs-linux.tar.gz > target/release/dyn-wall-rs-linux.sha256
+        
+      - name: Send tarball back
+        uses: actions/upload-artifact@v1
+        with:
+          name: dyn-wall-rs-linux.tar.gz
+          path: target/release/dyn-wall-rs-linux.tar.gz
+          
+      - name: Send sha256 back
+        uses: actions/upload-artifact@v1
+        with:
+          name: dyn-wall-rs-linux.sha256
+          path: target/release/dyn-wall-rs-linux.sha256
+
+  release-windows:
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Cache Deps
+        uses: actions/cache@v2.0.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build
+        run: cargo build --release
+        
+      - name: Pack into tarball
+        run: tar -czvf target/release/dyn-wall-rs-windows.tar.gz target/release/dyn-wall-rs
+
+      - name: Find sha265sum
+        run: sha256sum target/release/dyn-wall-rs-window.tar.gz > target/release/dyn-wall-rs-windows.sha256
+
+      - name: Send tarball back
+        uses: actions/upload-artifact@v1
+        with:
+          name: dyn-wall-rs-linux.tar.gz
+          path: target/release/dyn-wall-rs-windows.tar.gz          
+
+      - name: Send sha256 back
+        uses: actions/upload-artifact@v1
+        with:
+          name: dyn-wall-rs-linux.sha256
+          path: target/release/dyn-wall-rs-windows.sha256
