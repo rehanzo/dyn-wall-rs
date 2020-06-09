@@ -47,7 +47,7 @@ jobs:
         run: cp target/release/dyn-wall-rs .
         
       - name: Pack into tarball
-        run: tar -czvf assets/dyn-wall-rs-linux.tar.gz target/release/dyn-wall-rs
+        run: tar -czvf assets/dyn-wall-rs-linux.tar.gz dyn-wall-rs
         
       - name: Find sha265sum
         run: sha256sum assets/dyn-wall-rs-linux.tar.gz > assets/dyn-wall-rs-linux.sha256
