@@ -80,7 +80,8 @@ jobs:
         run: tar.exe -a -cf assets\dyn-wall-rs-windows.zip target\release\dyn-wall-rs.exe
 
       - name: Find sha265sum
-        run: $(certutil -hashfile assets\dyn-wall-rs-window.zip SHA256)[1] -replace " ","" > assets\dyn-wall-rs-windows.sha256
+        run: Get-FileHash assets\dyn-wall-rs-windows.zip -Algorithm SHA256 | Format-List > assets/dyn-wall-rs-windows.sha256
+Get-FileHash C:\Users\user1\Downloads\Contoso8_1_ENT.iso -Algorithm SHA384 | Format-List
 
       - name: Send zip back
         uses: actions/upload-artifact@v1
