@@ -50,7 +50,7 @@ jobs:
         run: tar -czvf dyn-wall-rs-linux.tar.gz dyn-wall-rs
         
       - name: Find sha265sum
-        run: sha256sum assets/dyn-wall-rs-linux.tar.gz > assets/dyn-wall-rs-linux.sha256
+        run: sha256sum dyn-wall-rs-linux.tar.gz > assets/dyn-wall-rs-linux.sha256
         
       - name: Move tarball to assets dir
         run: mv dyn-wall-rs-linux.tar.gz assets/
