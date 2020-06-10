@@ -35,6 +35,7 @@ use std::{io, iter, os::raw::c_void, os::windows::ffi::OsStrExt};
 use winapi::um::winuser::{
     SystemParametersInfoW, SPIF_SENDCHANGE, SPIF_UPDATEINIFILE, SPI_SETDESKWALLPAPER,
 };
+use std::fs::canonicalize;
 
 pub mod errors;
 pub mod time_track;
@@ -60,6 +61,13 @@ pub fn wallpaper_current_time(
         .next()
         .unwrap()
         .map_err(|_| Errors::DirNonExistantError(dir.to_string()))?;
+
+    // we should be able to unwrap the result from canonicalize since we already found
+    // out that the directory is valid
+    let dir = canonicalize(dir).unwrap();
+    let dir = dir.to_str().unwrap();
+    let mut dir_iter = sorted_dir_iter(dir);
+    println!("{}", dir);
 
     let mut prog_handle: Command = Command::new("");
     let mut times_iter = times.iter();
@@ -213,6 +221,11 @@ pub fn print_schedule(dir: &str, dir_count: usize) -> Result<(), Box<dyn Error>>
         .next()
         .unwrap()
         .map_err(|_| Errors::DirNonExistantError(dir.to_string()))?;
+
+    let dir = canonicalize(dir).unwrap();
+    let dir = dir.to_str().unwrap();
+    let mut dir_iter = sorted_dir_iter(dir);
+    println!("{}", dir);
 
     while i < 24 * 60 {
         println!(

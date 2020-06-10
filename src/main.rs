@@ -25,6 +25,7 @@ use std::{
     error::Error, fs::create_dir_all, fs::File, io::Read, io::Write, str::FromStr, sync::Arc,
 };
 use walkdir::WalkDir;
+use std::fs::canonicalize;
 
 pub mod errors;
 pub mod time_track;
