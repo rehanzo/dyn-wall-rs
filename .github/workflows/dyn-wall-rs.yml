@@ -1,13 +1,16 @@
-name: Test and build dyn-wall-rs for Linux and Windows
-
-on: push
-
+name: Test and build dyn-wall-rs for Linux and Windows  
+on:
+  push:
+    tags:
+      - "v*"
+        
 jobs:
   test:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
+        
     steps:
     - name: Cache Deps
       uses: actions/cache@v2.0.0
@@ -17,16 +20,17 @@ jobs:
           ~/.cargo/git
           target
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-        
+          
     - uses: actions/checkout@v2
     - name: Run tests
       run: cargo test --verbose
-
+      
   release-linux:
     needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        
       - name: Cache Deps
         uses: actions/cache@v2.0.0
         with:
@@ -34,14 +38,10 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-        
+          
       - name: Build
         run: cargo build --release
-        
-      - name: Make directory for assets
-        run: mkdir assets
         
       - name: Copy binary over
         run: cp target/release/dyn-wall-rs .
@@ -50,22 +50,49 @@ jobs:
         run: tar -czvf dyn-wall-rs-linux.tar.gz dyn-wall-rs
         
       - name: Find sha265sum
-        run: sha256sum dyn-wall-rs-linux.tar.gz > assets/dyn-wall-rs-linux.sha256
+        run: sha256sum dyn-wall-rs-linux.tar.gz > dyn-wall-rs-linux.sha256
         
-      - name: Move tarball to assets dir
-        run: mv dyn-wall-rs-linux.tar.gz assets/
-        
-      - name: Send tarball and sha256 back
-        uses: actions/upload-artifact@v1
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: assets-linux
-          path: assets/
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+          draft: false
+          prerelease: false
+        
+      - name: Upload Linux zip
+        id: upload-linux-zip 
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: dyn-wall-rs-linux.tar.gz
+          asset_name: dyn-wall-rs-linux.tar.gz
+          asset_content_type: application/zip
 
+      - name: Upload Linux sha256
+        id: upload-linux-sha256
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} 
+          asset_path: dyn-wall-rs-linux.sha256
+          asset_name: dyn-wall-rs-linux.sha256
+          asset_content_type: application/zip
+            
   release-windows:
     needs: test
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v2
+        
       - name: Cache Deps
         uses: actions/cache@v2.0.0
         with:
@@ -73,29 +100,26 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
       - name: Build
         run: cargo build --release
-        
-      - name: Make directory for assets
-        run: mkdir assets
         
       - name: Copy .exe over
         run: Copy-Item -Path target\release\dyn-wall-rs.exe
         
       - name: zip .exe
         run: tar.exe -a -cf dyn-wall-rs-windows.zip dyn-wall-rs.exe
-
+        
       - name: Find sha265sum
-        run: Get-FileHash dyn-wall-rs-windows.zip -Algorithm SHA256 | Format-List > assets\dyn-wall-rs-windows.sha256
+        run: Get-FileHash dyn-wall-rs-windows.zip -Algorithm SHA256 | Format-List > dyn-wall-rs-windows.sha256
         
-      - name: Move zip to assets dir
-        run: Move-Item -Path dyn-wall-rs-windows.zip -Destination assets\
+      - name: Get the version
+        id: get_version
+        shell: bash
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
         
-      - name: Send zip back
-        uses: actions/upload-artifact@v1
+      - uses: AButler/upload-release-assets@v2.0
         with:
-          name: assets-windows
-          path: assets\
+          files: 'dyn-wall-rs-windows.zip;dyn-wall-rs-windows.sha256'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          release-tag: ${{ steps.get_version.outputs.VERSION }}
