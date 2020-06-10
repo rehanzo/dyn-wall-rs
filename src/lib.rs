@@ -1,35 +1,40 @@
 /*
-    dyn-wall-rs 1.1.0
-    Rehan Rana <rehanalirana@tuta.io>
-    Helps user set a dynamic wallpaper and lockscreen. For more info and help, go to https://github.com/RAR27/dyn-wall-rs
-    Copyright (C) 2020  Rehan Rana
+   dyn-wall-rs 1.1.0
+   Rehan Rana <rehanalirana@tuta.io>
+   Helps user set a dynamic wallpaper and lockscreen. For more info and help, go to https://github.com/RAR27/dyn-wall-rs
+   Copyright (C) 2020  Rehan Rana
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+   This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
 use crate::time_track::Time;
 use chrono::{Local, Timelike};
 use clokwerk::{Scheduler, TimeUnits};
-use std::{error::Error, process, process::Command, sync::Arc, thread::sleep, time::Duration, env};
+use std::{env, error::Error, process, process::Command, sync::Arc, thread::sleep, time::Duration};
 use walkdir::{IntoIter, WalkDir};
 
 use crate::errors::{ConfigFileErrors, Errors};
-use unicase::UniCase;
 use run_script::ScriptOptions;
+use unicase::UniCase;
 
-#[cfg(windows)] use std::ffi::OsStr;
-#[cfg(windows)] use std::{ io, iter, os::raw::c_void, os::windows::ffi::OsStrExt };
-#[cfg(windows)] use winapi::um::winuser::{ SPI_SETDESKWALLPAPER, SPIF_UPDATEINIFILE, SPIF_SENDCHANGE, SystemParametersInfoW };
+#[cfg(windows)]
+use std::ffi::OsStr;
+#[cfg(windows)]
+use std::{io, iter, os::raw::c_void, os::windows::ffi::OsStrExt};
+#[cfg(windows)]
+use winapi::um::winuser::{
+    SystemParametersInfoW, SPIF_SENDCHANGE, SPIF_UPDATEINIFILE, SPI_SETDESKWALLPAPER,
+};
 
 pub mod errors;
 pub mod time_track;
@@ -106,8 +111,7 @@ pub fn wallpaper_current_time(
 
         prog_handle_loader(&last_image, Arc::clone(&program), &mut prog_handle);
         filepath_set = last_image;
-    }
-    else {
+    } else {
         de_command_spawn(&filepath_set)?;
     }
 
@@ -241,7 +245,10 @@ fn error_checking(
 ) -> Result<Time, Box<dyn Error>> {
     let times_iter_err = times.iter();
     let full_time = Time::new(24 * 60);
-    let start_range = times.iter().next().ok_or(Errors::ConfigFileError(ConfigFileErrors::Empty))?;
+    let start_range = times
+        .iter()
+        .next()
+        .ok_or(Errors::ConfigFileError(ConfigFileErrors::Empty))?;
     let mut start_range_other = times.iter().next().unwrap();
     let mut curr_range = start_range.to_owned();
     let mut curr_range_other = start_range.to_owned();
@@ -301,11 +308,28 @@ fn de_command_spawn(filepath_set: &str) -> Result<(), Box<dyn Error>> {
 
 #[cfg(not(windows))]
 fn de_command_spawn(filepath_set: &str) -> Result<(), Box<dyn Error>> {
-    let gnome = vec![UniCase::new("pantheon"), UniCase::new("gnome"), UniCase::new("gnome-xorg"), UniCase::new("ubuntu"), UniCase::new("deepin"), UniCase::new("pop"), UniCase::new("ubuntu:gnome")];
+    let gnome = vec![
+        UniCase::new("pantheon"),
+        UniCase::new("gnome"),
+        UniCase::new("gnome-xorg"),
+        UniCase::new("ubuntu"),
+        UniCase::new("deepin"),
+        UniCase::new("pop"),
+        UniCase::new("ubuntu:gnome"),
+    ];
     let mate = UniCase::new("mate");
-    let kde = vec![UniCase::new("plasma"), UniCase::new("neon"), UniCase::new("kde"), UniCase::new("/usr/share/xsessions/plasma")];
+    let kde = vec![
+        UniCase::new("plasma"),
+        UniCase::new("neon"),
+        UniCase::new("kde"),
+        UniCase::new("/usr/share/xsessions/plasma"),
+    ];
     let lxde = UniCase::new("lxde");
-    let xfce = vec![UniCase::new("xfce"), UniCase::new("xubuntu"), UniCase::new("xfce session")];
+    let xfce = vec![
+        UniCase::new("xfce"),
+        UniCase::new("xubuntu"),
+        UniCase::new("xfce session"),
+    ];
 
     let curr_de = env::var("XDG_CURRENT_DESKTOP");
     let curr_de = match curr_de {
@@ -315,8 +339,7 @@ fn de_command_spawn(filepath_set: &str) -> Result<(), Box<dyn Error>> {
     let curr_de = UniCase::new(curr_de.as_str());
 
     let mut feh_handle = Command::new("feh");
-    let feh_handle = feh_handle.arg("--bg-scale")
-        .arg(filepath_set);
+    let feh_handle = feh_handle.arg("--bg-scale").arg(filepath_set);
 
     //Pantheon, Gnome, Ubuntu, Deepin, Pop
     let mut gnome_handle = Command::new("gsettings");
@@ -344,9 +367,7 @@ qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "
 
     //lxde
     let mut lxde_handle = Command::new("pcmanfm");
-    let lxde_handle = lxde_handle
-        .arg("--set-wallpaper")
-        .arg(filepath_set);
+    let lxde_handle = lxde_handle.arg("--set-wallpaper").arg(filepath_set);
 
     //mate
     let mut mate_handle = Command::new("gsettings set org.mate.background picture-filename");
@@ -366,15 +387,31 @@ qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "
     let xfce_script = format!("{}{}{}", xfce_script_beg, filepath_set, xfce_script_end);
     let xfce_script_alt = format!("{}{}{}", xfce_script_alt_beg, filepath_set, xfce_script_end);
 
-    if gnome.contains(&curr_de) { gnome_handle.spawn().map_err(|_|Errors::ProgramRunError(String::from("Gnome Wallpaper Adjuster")))?; }
-    else if lxde == curr_de { lxde_handle.spawn().map_err(|_|Errors::ProgramRunError(String::from("LXDE Wallpaper Adjuster")))?; }
-    else if mate == curr_de { mate_handle.spawn().map_err(|_|Errors::ProgramRunError(String::from("Mate Wallpaper Adjuster")))?; }
-    else if kde.contains(&curr_de) { run_script::run(kde_script.as_str(), &vec![], &ScriptOptions::new()).map_err(|_|Errors::ProgramRunError(String::from("KDE Wallpaper Adjuster")))?; }
-    else if xfce.contains(&curr_de) {
-        run_script::run(xfce_script.as_str(), &vec![], &ScriptOptions::new()).map_err(|_|Errors::ProgramRunError(String::from("XFCE Wallpaper Adjuster")))?;
-        run_script::run(xfce_script_alt.as_str(), &vec![], &ScriptOptions::new()).map_err(|_|Errors::ProgramRunError(String::from("XFCE Wallpaper Adjuster")))?;
-    }
-    else { feh_handle.spawn().map_err(|_|Errors::ProgramRunError(String::from("Feh")))?; };
+    if gnome.contains(&curr_de) {
+        gnome_handle
+            .spawn()
+            .map_err(|_| Errors::ProgramRunError(String::from("Gnome Wallpaper Adjuster")))?;
+    } else if lxde == curr_de {
+        lxde_handle
+            .spawn()
+            .map_err(|_| Errors::ProgramRunError(String::from("LXDE Wallpaper Adjuster")))?;
+    } else if mate == curr_de {
+        mate_handle
+            .spawn()
+            .map_err(|_| Errors::ProgramRunError(String::from("Mate Wallpaper Adjuster")))?;
+    } else if kde.contains(&curr_de) {
+        run_script::run(kde_script.as_str(), &vec![], &ScriptOptions::new())
+            .map_err(|_| Errors::ProgramRunError(String::from("KDE Wallpaper Adjuster")))?;
+    } else if xfce.contains(&curr_de) {
+        run_script::run(xfce_script.as_str(), &vec![], &ScriptOptions::new())
+            .map_err(|_| Errors::ProgramRunError(String::from("XFCE Wallpaper Adjuster")))?;
+        run_script::run(xfce_script_alt.as_str(), &vec![], &ScriptOptions::new())
+            .map_err(|_| Errors::ProgramRunError(String::from("XFCE Wallpaper Adjuster")))?;
+    } else {
+        feh_handle
+            .spawn()
+            .map_err(|_| Errors::ProgramRunError(String::from("Feh")))?;
+    };
 
     println!("{} has been set as your wallpaper", filepath_set);
     Ok(())
