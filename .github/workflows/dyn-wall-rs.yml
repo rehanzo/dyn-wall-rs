@@ -47,10 +47,13 @@ jobs:
         run: cp target/release/dyn-wall-rs .
         
       - name: Pack into tarball
-        run: tar -czvf assets/dyn-wall-rs-linux.tar.gz dyn-wall-rs
+        run: tar -czvf dyn-wall-rs-linux.tar.gz dyn-wall-rs
         
       - name: Find sha265sum
         run: sha256sum assets/dyn-wall-rs-linux.tar.gz > assets/dyn-wall-rs-linux.sha256
+        
+      - name: Move tarball to assets dir
+        run: mv dyn-wall-rs-linux.tar.gz assets/
         
       - name: Send tarball and sha256 back
         uses: actions/upload-artifact@v1
@@ -83,11 +86,14 @@ jobs:
         run: Copy-Item -Path target\release\dyn-wall-rs.exe
         
       - name: zip .exe
-        run: tar.exe -a -cf assets\dyn-wall-rs-windows.zip dyn-wall-rs.exe
+        run: tar.exe -a -cf dyn-wall-rs-windows.zip dyn-wall-rs.exe
 
       - name: Find sha265sum
-        run: Get-FileHash assets\dyn-wall-rs-windows.zip -Algorithm SHA256 | Format-List > assets/dyn-wall-rs-windows.sha256
-
+        run: Get-FileHash dyn-wall-rs-windows.zip -Algorithm SHA256 | Format-List > assets\dyn-wall-rs-windows.sha256
+        
+      - name: Move zip to assets dir
+        run: Move-Item -Path dyn-wall-rs-windows.zip -Destination assets\
+        
       - name: Send zip back
         uses: actions/upload-artifact@v1
         with:
