@@ -67,7 +67,7 @@ pub fn wallpaper_current_time(
     let dir = canonicalize(dir).unwrap();
     let dir = dir.to_str().unwrap();
     let mut dir_iter = sorted_dir_iter(dir);
-    println!("{}", dir);
+    dir_iter.next();
 
     let mut prog_handle: Command = Command::new("");
     let mut times_iter = times.iter();
@@ -225,7 +225,7 @@ pub fn print_schedule(dir: &str, dir_count: usize) -> Result<(), Box<dyn Error>>
     let dir = canonicalize(dir).unwrap();
     let dir = dir.to_str().unwrap();
     let mut dir_iter = sorted_dir_iter(dir);
-    println!("{}", dir);
+    dir_iter.next();
 
     while i < 24 * 60 {
         println!(
