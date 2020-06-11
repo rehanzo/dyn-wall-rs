@@ -275,7 +275,7 @@ fn error_checking(
         Some(time) => Ok(time),
     }?;
     if 1440 % dir_count != 0 || dir_count == 0 {
-        Err(Errors::CountCompatError(dir_count).into());
+        return Err(Errors::CountCompatError(dir_count).into());
     }
     Ok(*loop_time)
 }
