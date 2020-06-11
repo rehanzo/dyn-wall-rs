@@ -54,8 +54,6 @@ pub fn wallpaper_current_time(
     program: Arc<Option<String>>,
     times: &[Time],
 ) -> Result<(), Box<dyn Error>> {
-    // we should be able to unwrap the result from canonicalize since we already found
-    // out that the directory is valid
     let mut dir_iter = sorted_dir_iter(dir);
 
     dir_iter.next();
