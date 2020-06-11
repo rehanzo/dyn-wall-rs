@@ -240,7 +240,7 @@ pub fn print_schedule(dir: &str, dir_count: usize) -> Result<(), Box<dyn Error>>
     Ok(())
 }
 
-fn sorted_dir_iter(dir: &str) -> IntoIter {
+pub fn sorted_dir_iter(dir: &str) -> IntoIter {
     WalkDir::new(dir)
         .sort_by(|a, b| {
             alphanumeric_sort::compare_str(
