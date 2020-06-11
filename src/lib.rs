@@ -126,17 +126,6 @@ pub fn wallpaper_current_time(
     Ok(())
 }
 
-fn prog_handle_loader(filepath_set: &str, program: Arc<Option<String>>, prog_handle: &mut Command) {
-    if let Some(prog_str) = program.as_deref() {
-        let mut prog_split = prog_str.split_whitespace();
-        *prog_handle = Command::new(prog_split.next().unwrap());
-        for word in prog_split {
-            prog_handle.arg(word);
-        }
-        prog_handle.arg(filepath_set);
-    }
-}
-
 pub fn wallpaper_listener(
     dir: String,
     dir_count: usize,
@@ -182,6 +171,17 @@ pub fn wallpaper_listener(
     loop {
         scheduler.run_pending();
         sleep(Duration::from_millis(1000));
+    }
+}
+
+fn prog_handle_loader(filepath_set: &str, program: Arc<Option<String>>, prog_handle: &mut Command) {
+    if let Some(prog_str) = program.as_deref() {
+        let mut prog_split = prog_str.split_whitespace();
+        *prog_handle = Command::new(prog_split.next().unwrap());
+        for word in prog_split {
+            prog_handle.arg(word);
+        }
+        prog_handle.arg(filepath_set);
     }
 }
 
@@ -274,12 +274,12 @@ fn error_checking(
         None => Err(Errors::ConfigFileError(ConfigFileErrors::Empty)),
         Some(time) => Ok(time),
     }?;
-
     if 1440 % dir_count != 0 || dir_count == 0 {
-        return Err(Errors::CountCompatError(dir_count).into());
-    };
+        Err(Errors::CountCompatError(dir_count).into());
+    }
     Ok(*loop_time)
 }
+
 #[cfg(windows)]
 fn de_command_spawn(filepath_set: &str) -> Result<(), Box<dyn Error>> {
     unsafe {
