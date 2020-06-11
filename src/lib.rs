@@ -54,12 +54,11 @@ pub fn wallpaper_current_time(
     program: Arc<Option<String>>,
     times: &[Time],
 ) -> Result<(), Box<dyn Error>> {
+    // we should be able to unwrap the result from canonicalize since we already found
+    // out that the directory is valid
     let mut dir_iter = sorted_dir_iter(dir);
 
-    dir_iter
-        .next()
-        .unwrap()
-        .map_err(|_| Errors::DirNonExistantError(dir.to_string()))?;
+    dir_iter.next();
 
     let mut prog_handle: Command = Command::new("");
     let mut times_iter = times.iter();
@@ -127,17 +126,6 @@ pub fn wallpaper_current_time(
     Ok(())
 }
 
-fn prog_handle_loader(filepath_set: &str, program: Arc<Option<String>>, prog_handle: &mut Command) {
-    if let Some(prog_str) = program.as_deref() {
-        let mut prog_split = prog_str.split_whitespace();
-        *prog_handle = Command::new(prog_split.next().unwrap());
-        for word in prog_split {
-            prog_handle.arg(word);
-        }
-        prog_handle.arg(filepath_set);
-    }
-}
-
 pub fn wallpaper_listener(
     dir: String,
     dir_count: usize,
@@ -186,6 +174,17 @@ pub fn wallpaper_listener(
     }
 }
 
+fn prog_handle_loader(filepath_set: &str, program: Arc<Option<String>>, prog_handle: &mut Command) {
+    if let Some(prog_str) = program.as_deref() {
+        let mut prog_split = prog_str.split_whitespace();
+        *prog_handle = Command::new(prog_split.next().unwrap());
+        for word in prog_split {
+            prog_handle.arg(word);
+        }
+        prog_handle.arg(filepath_set);
+    }
+}
+
 pub fn listener_setup(dir: &str) -> (usize, Result<Time, Errors>, Time, Vec<Time>) {
     let dir_count = WalkDir::new(dir).into_iter().count() - 1;
     let step_time = if dir_count == 0 {
@@ -209,10 +208,9 @@ pub fn print_schedule(dir: &str, dir_count: usize) -> Result<(), Box<dyn Error>>
         return Err(Errors::CountCompatError(dir_count).into());
     }
 
-    dir_iter
-        .next()
-        .unwrap()
-        .map_err(|_| Errors::DirNonExistantError(dir.to_string()))?;
+    dir_iter.next();
+
+    let mut dir_iter = sorted_dir_iter(dir);
 
     while i < 24 * 60 {
         println!(
@@ -227,7 +225,7 @@ pub fn print_schedule(dir: &str, dir_count: usize) -> Result<(), Box<dyn Error>>
     Ok(())
 }
 
-fn sorted_dir_iter(dir: &str) -> IntoIter {
+pub fn sorted_dir_iter(dir: &str) -> IntoIter {
     WalkDir::new(dir)
         .sort_by(|a, b| {
             alphanumeric_sort::compare_str(
@@ -276,12 +274,12 @@ fn error_checking(
         None => Err(Errors::ConfigFileError(ConfigFileErrors::Empty)),
         Some(time) => Ok(time),
     }?;
-
     if 1440 % dir_count != 0 || dir_count == 0 {
         return Err(Errors::CountCompatError(dir_count).into());
-    };
+    }
     Ok(*loop_time)
 }
+
 #[cfg(windows)]
 fn de_command_spawn(filepath_set: &str) -> Result<(), Box<dyn Error>> {
     unsafe {

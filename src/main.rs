@@ -20,7 +20,8 @@
 use crate::errors::{ConfigFileErrors, Errors};
 use clap::{App, AppSettings, Arg};
 use dirs::config_dir;
-use dyn_wall_rs::{print_schedule, time_track::Time, wallpaper_listener};
+use dyn_wall_rs::{print_schedule, sorted_dir_iter, time_track::Time, wallpaper_listener};
+use std::fs::canonicalize;
 use std::{
     error::Error, fs::create_dir_all, fs::File, io::Read, io::Write, str::FromStr, sync::Arc,
 };
@@ -84,18 +85,32 @@ fn main() {
     if let Some(auto) = matches.value_of("Auto") {
         let dir_count = WalkDir::new(auto).into_iter().count() - 1;
 
-        if let Err(e) =
-            wallpaper_listener(String::from(auto), dir_count, Arc::clone(&program), None)
-        {
-            eprintln!("{}", e);
+        match check_dir_exists(auto) {
+            Err(e) => eprintln!("{}", e),
+            Ok(_) => {
+                let auto = canonicalize(auto).unwrap();
+                let auto = auto.to_str().unwrap();
+                if let Err(e) =
+                    wallpaper_listener(String::from(auto), dir_count, Arc::clone(&program), None)
+                {
+                    eprintln!("{}", e);
+                }
+            }
         }
     }
 
     if let Some(s) = matches.value_of("Schedule") {
         let dir_count = WalkDir::new(s).into_iter().count() - 1;
 
-        if let Err(e) = print_schedule(s, dir_count) {
-            eprintln!("{}", e);
+        match check_dir_exists(s) {
+            Err(e) => eprintln!("{}", e),
+            Ok(_) => {
+                let s = canonicalize(s).unwrap();
+                let s = s.to_str().unwrap();
+                if let Err(e) = print_schedule(s, dir_count) {
+                    eprintln!("{}", e);
+                }
+            }
         }
     }
 
@@ -106,16 +121,21 @@ fn main() {
             Err(e) => {
                 eprintln!("{}", e);
             }
-            Ok(times) => {
-                if let Err(e) = wallpaper_listener(
-                    String::from(c),
-                    dir_count,
-                    Arc::clone(&program),
-                    Some(times),
-                ) {
-                    eprintln!("{}", e);
+            Ok(times) => match check_dir_exists(c) {
+                Err(e) => eprintln!("{}", e),
+                Ok(_) => {
+                    let c = canonicalize(c).unwrap();
+                    let c = c.to_str().unwrap();
+                    if let Err(e) = wallpaper_listener(
+                        String::from(c),
+                        dir_count,
+                        Arc::clone(&program),
+                        Some(times),
+                    ) {
+                        eprintln!("{}", e);
+                    }
                 }
-            }
+            },
         }
     }
 }
@@ -185,4 +205,14 @@ fn create_config() -> Result<(), Box<dyn Error>> {
 
     config_file.write_all(default_test.as_bytes())?;
     Ok(())
+}
+
+fn check_dir_exists(dir: &str) -> Result<(), Errors> {
+    let mut dir_iter = sorted_dir_iter(dir);
+
+    if dir_iter.next().unwrap().is_err() {
+        Err(Errors::DirNonExistantError(dir.to_string()))
+    } else {
+        Ok(())
+    }
 }
