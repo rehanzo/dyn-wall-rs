@@ -85,15 +85,22 @@ fn main() {
     if let Some(auto) = matches.value_of("Auto") {
         let dir_count = WalkDir::new(auto).into_iter().count() - 1;
 
-        match check_dir_exists(auto) {
-            Err(e) => eprintln!("{}", e),
-            Ok(_) => {
-                let auto = canonicalize(auto).unwrap();
-                let auto = auto.to_str().unwrap();
-                if let Err(e) =
-                    wallpaper_listener(String::from(auto), dir_count, Arc::clone(&program), None)
-                {
-                    eprintln!("{}", e);
+        if 1440 % dir_count != 0 || dir_count == 0 {
+            eprintln!("{}", Errors::CountCompatError(dir_count));
+        } else {
+            match check_dir_exists(auto) {
+                Err(e) => eprintln!("{}", e),
+                Ok(_) => {
+                    let auto = canonicalize(auto).unwrap();
+                    let auto = auto.to_str().unwrap();
+                    if let Err(e) = wallpaper_listener(
+                        String::from(auto),
+                        dir_count,
+                        Arc::clone(&program),
+                        None,
+                    ) {
+                        eprintln!("{}", e);
+                    }
                 }
             }
         }
@@ -102,13 +109,17 @@ fn main() {
     if let Some(s) = matches.value_of("Schedule") {
         let dir_count = WalkDir::new(s).into_iter().count() - 1;
 
-        match check_dir_exists(s) {
-            Err(e) => eprintln!("{}", e),
-            Ok(_) => {
-                let s = canonicalize(s).unwrap();
-                let s = s.to_str().unwrap();
-                if let Err(e) = print_schedule(s, dir_count) {
-                    eprintln!("{}", e);
+        if 1440 % dir_count != 0 || dir_count == 0 {
+            eprintln!("{}", Errors::CountCompatError(dir_count));
+        } else {
+            match check_dir_exists(s) {
+                Err(e) => eprintln!("{}", e),
+                Ok(_) => {
+                    let s = canonicalize(s).unwrap();
+                    let s = s.to_str().unwrap();
+                    if let Err(e) = print_schedule(s, dir_count) {
+                        eprintln!("{}", e);
+                    }
                 }
             }
         }

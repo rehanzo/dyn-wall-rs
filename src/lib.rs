@@ -50,7 +50,6 @@ pub mod time_track;
 /// * `times` - vector of time objects representing the times for each wallpaper in order
 pub fn wallpaper_current_time(
     dir: &str,
-    dir_count: usize,
     program: Arc<Option<String>>,
     times: &[Time],
 ) -> Result<(), Box<dyn Error>> {
@@ -68,7 +67,7 @@ pub fn wallpaper_current_time(
     let mut filepath_set: String = String::new();
     let mut last_image = String::new();
 
-    let mut loop_time = error_checking(times, loop_time, dir_count)?;
+    let mut loop_time = error_checking(times, loop_time)?;
 
     //this loop is to find where the current time lays, and adjust the wallpaper based on that
     for file in dir_iter {
@@ -145,7 +144,7 @@ pub fn wallpaper_listener(
         Some(t) => times = t,
     }
 
-    wallpaper_current_time(&dir, dir_count, Arc::clone(&program), &times)?;
+    wallpaper_current_time(&dir, Arc::clone(&program), &times)?;
 
     for time in &times {
         let time_fmt = format!("{:02}:{:02}", time.hours, time.mins);
@@ -153,7 +152,7 @@ pub fn wallpaper_listener(
     }
 
     let sched_closure = move || {
-        let result = wallpaper_current_time(&dir, dir_count, Arc::clone(&program), &times);
+        let result = wallpaper_current_time(&dir, Arc::clone(&program), &times);
 
         match result {
             Ok(s) => s,
@@ -234,11 +233,7 @@ pub fn sorted_dir_iter(dir: &str) -> IntoIter {
         .into_iter()
 }
 
-fn error_checking(
-    times: &[Time],
-    loop_time: Option<&Time>,
-    dir_count: usize,
-) -> Result<Time, Box<dyn Error>> {
+fn error_checking(times: &[Time], loop_time: Option<&Time>) -> Result<Time, Box<dyn Error>> {
     let times_iter_err = times.iter();
     let full_time = Time::new(24 * 60);
     let start_range = times
@@ -272,9 +267,6 @@ fn error_checking(
         None => Err(Errors::ConfigFileError(ConfigFileErrors::Empty)),
         Some(time) => Ok(time),
     }?;
-    if 1440 % dir_count != 0 || dir_count == 0 {
-        return Err(Errors::CountCompatError(dir_count).into());
-    }
     Ok(*loop_time)
 }
 
