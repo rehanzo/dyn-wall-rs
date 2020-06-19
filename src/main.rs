@@ -26,75 +26,74 @@ use std::{
     error::Error, fs::create_dir_all, fs::File, io::Read, io::Write, str::FromStr, sync::Arc,
 };
 use walkdir::WalkDir;
+use structopt::StructOpt;
 
 pub mod errors;
 pub mod time_track;
 
-fn main() {
-    let mut program = Arc::new(None);
-    let matches = App::new("dyn-wall-rs")
-        .version("1.1.2")
-        .author("Rehan Rana <rehanalirana@tuta.io>")
-        .about("Helps user set a dynamic wallpaper and lockscreen. Make sure the wallpapers are named in numerical order based on the order you want. For more info and help, go to https://github.com/RAR27/dyn-wall-rs")
-        .setting(AppSettings::ArgRequiredElseHelp)
-        .setting(AppSettings::DeriveDisplayOrder)
-        .arg(
-            Arg::with_name("Auto")
-                .short("a")
-                .long("auto")
-                .value_name("DIRECTORY")
-                .help("Sets the wallpaper based on the current time and changes the wallpaper throughout the day based on the time")
-                .takes_value(true)
-                .conflicts_with("Schedule")
-        )
-        .arg(
-            Arg::with_name("Custom Timing")
-                .short("c")
-                .long("custom")
-                .value_name("DIRECTORY")
-                .help(r#"Changes wallpapers based on custom times set through a config file created at ~/.config/dyn-wall-rs/config for Unix systems and C:\Users\<USER NAME>\AppData\Roaming\dyn-wall-rs for Windows systems"#)
-                .takes_value(true)
-        )
-        .arg(
-            Arg::with_name("Lockscreen")
-                .short("l")
-                .long("lockscreen")
-                .value_name("COMMAND")
-                .help(r#"Sends image as argument to command specified. Use alongside listener or custom. If the command itself contains arguments, wrap in quotation marks
-                ex. dyn-wall-rs -a /path/to/dir -l "betterlockscreen -u""#)
-                .takes_value(true)
-        )
-        .arg(
-            Arg::with_name("Schedule")
-                .short("s")
-                .long("schedule")
-                .value_name("DIRECTORY")
-                .help("Prints out a schedule of the times at which the wallpaper would change if the auto option were to be used")
-                .takes_value(true)
-        )
-        .get_matches();
+#[derive(StructOpt)]
+#[structopt(about = "Helps user set a dynamic wallpaper and lockscreen. Make sure the wallpapers are named in numerical order based on the order you want. For more info and help, go to https://github.com/RAR27/dyn-wall-rs", author = "Rehan Rana <rehanalirana@tuta.io>")]
+struct Args {
+    #[structopt(short, 
+                long, 
+                value_name = "DIRECTORY", 
+                help = "Sets the wallpaper based on the current time and changes the wallpaper throughout the day based on the time", 
+                conflicts_with = "Schedule",
+                )]
+    auto: Option<String>,
 
-    if let Some(prog) = matches.value_of("Lockscreen") {
-        if matches.value_of("Auto").is_none() && matches.value_of("Custom Timing").is_none() {
+
+    #[structopt(short, 
+                long, 
+                value_name = "DIRECTORY", 
+                help = r#"Changes wallpapers based on custom times set through a config file created at ~/.config/dyn-wall-rs/config for Unix systems and C:\Users\<USER NAME>\AppData\Roaming\dyn-wall-rs for Windows systems"#,
+                )]
+    custom: Option<String>,
+
+
+    #[structopt(short = "l", 
+                long = "lockscreen", 
+                value_name = "COMMAND", 
+                help = r#"Sends image as argument to command specified. Use alongside listener or custom. If the command itself contains arguments, wrap in quotation ex. dyn-wall-rs -a /path/to/dir -l "betterlockscreen -u""#,
+                )]
+    prog: Option<String>,
+
+    #[structopt(short, 
+                long, 
+                value_name = "COMMAND", 
+                help = r#"Sends image as argument to command specified. Use alongside listener or custom. If the command itself contains arguments, wrap in quotation ex. dyn-wall-rs -a /path/to/dir -l "betterlockscreen -u""#,
+                )]
+    schedule: Option<String>,
+
+}
+
+
+fn main() {
+    let args = Args::from_args();
+    let mut program = Arc::new(None);
+
+    if let Some(prog) = args.prog {
+        if args.auto.is_none() && args.custom.is_none() {
             eprintln!("This option is to be used along with auto or custom");
         } else {
             program = Arc::new(Some(String::from(prog)));
         }
     }
 
-    if let Some(auto) = matches.value_of("Auto") {
-        let dir_count = WalkDir::new(auto).into_iter().count() - 1;
+    if let Some(dir) = args.auto {
+        let dir = dir.as_str();
+        let dir_count = WalkDir::new(dir).into_iter().count() - 1;
 
         if 1440 % dir_count != 0 || dir_count == 0 {
             eprintln!("{}", Errors::CountCompatError(dir_count));
         } else {
-            match check_dir_exists(auto) {
+            match check_dir_exists(dir) {
                 Err(e) => eprintln!("{}", e),
                 Ok(_) => {
-                    let auto = canonicalize(auto).unwrap();
-                    let auto = auto.to_str().unwrap();
+                    let dir = canonicalize(dir).unwrap();
+                    let dir = dir.to_str().unwrap();
                     if let Err(e) = wallpaper_listener(
-                        String::from(auto),
+                        String::from(dir),
                         dir_count,
                         Arc::clone(&program),
                         None,
@@ -106,18 +105,19 @@ fn main() {
         }
     }
 
-    if let Some(s) = matches.value_of("Schedule") {
-        let dir_count = WalkDir::new(s).into_iter().count() - 1;
+    if let Some(dir) = args.schedule {
+        let dir = dir.as_str();
+        let dir_count = WalkDir::new(dir).into_iter().count() - 1;
 
         if 1440 % dir_count != 0 || dir_count == 0 {
             eprintln!("{}", Errors::CountCompatError(dir_count));
         } else {
-            match check_dir_exists(s) {
+            match check_dir_exists(dir) {
                 Err(e) => eprintln!("{}", e),
                 Ok(_) => {
-                    let s = canonicalize(s).unwrap();
-                    let s = s.to_str().unwrap();
-                    if let Err(e) = print_schedule(s, dir_count) {
+                    let dir = canonicalize(dir).unwrap();
+                    let dir = dir.to_str().unwrap();
+                    if let Err(e) = print_schedule(dir, dir_count) {
                         eprintln!("{}", e);
                     }
                 }
@@ -125,20 +125,21 @@ fn main() {
         }
     }
 
-    if let Some(c) = matches.value_of("Custom Timing") {
-        let dir_count = WalkDir::new(c).into_iter().count() - 1;
+    if let Some(dir) = args.custom {
+        let dir = dir.as_str();
+        let dir_count = WalkDir::new(dir).into_iter().count() - 1;
 
         match config_parse() {
             Err(e) => {
                 eprintln!("{}", e);
             }
-            Ok(times) => match check_dir_exists(c) {
+            Ok(times) => match check_dir_exists(dir) {
                 Err(e) => eprintln!("{}", e),
                 Ok(_) => {
-                    let c = canonicalize(c).unwrap();
-                    let c = c.to_str().unwrap();
+                    let dir = canonicalize(dir).unwrap();
+                    let dir = dir.to_str().unwrap();
                     if let Err(e) = wallpaper_listener(
-                        String::from(c),
+                        String::from(dir),
                         dir_count,
                         Arc::clone(&program),
                         Some(times),
