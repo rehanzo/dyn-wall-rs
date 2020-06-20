@@ -279,7 +279,7 @@ fn de_command_spawn(
     backend: Arc<Option<String>>,
 ) -> Result<(), Box<dyn Error>> {
     if backend.is_some() {
-        eprintln("NOTE: You are unable to select a backend on windows")
+        eprintln!("NOTE: You are unable to select a backend on windows")
     }
     unsafe {
         let file = OsStr::new(filepath_set)
