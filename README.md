@@ -73,7 +73,10 @@ There are a few different ways to use dyn-wall-rs using the different flags, whi
     ex. `dyn-wall-rs -a /path/to/dir/ -l "betterlockscreen -u"`
 
   * **-s, --schedule \<DIRECTORY>**\
-    Prints out a schedule of the times at which the wallpaper would change if the auto option were to be used
+    Prints out a schedule of the times at which the wallpaper would change if the auto option were to be used.
+    
+  * **-b, --backend \<BACKEND>**\
+    Uses the specified method as the backend to change the wallpaper. Type a supported DE name to use that DE's wallpaper changing command, or type `feh` to use feh. Case insensitive.
 
 Once you figure out which options you want to use and test it to make sure its working how you want it to, have the command autostart on boot.
 
