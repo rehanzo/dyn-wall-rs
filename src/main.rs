@@ -18,6 +18,7 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 use crate::errors::{ConfigFileErrors, Errors};
+use clap::AppSettings;
 use dirs::config_dir;
 use dyn_wall_rs::{print_schedule, sorted_dir_iter, time_track::Time, wallpaper_listener};
 use std::fs::canonicalize;
@@ -79,7 +80,12 @@ struct Args {
 }
 
 fn main() {
-    let args = Args::from_args();
+    //convert to clap to add setting to print help message if no argument sent
+    //and make help message order same as Args struct order
+    let clap = Args::clap()
+        .setting(AppSettings::ArgRequiredElseHelp)
+        .setting(AppSettings::DeriveDisplayOrder);
+    let args = Args::from_clap(&clap.get_matches());
     let mut program = Arc::new(None);
     let backend = Arc::new(args.backend);
 
