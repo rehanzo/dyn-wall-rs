@@ -17,7 +17,7 @@ The aim of dyn-wall-rs is to provide users with a very simple and easy way to im
 
 
 ## Installation
-You can download the binary from the [releases][RELEASES] page but if you prefer, you can install through one of the methods listed below\
+You can download the binary from the [releases][RELEASES] page but if you prefer, you can install through one of the methods listed below.\
 **NOTE: [Feh](https://feh.finalrewind.org/) needs to be installed if you are using a Window Manager**
 
 ### AUR
