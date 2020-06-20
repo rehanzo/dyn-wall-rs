@@ -34,6 +34,7 @@ pub enum Errors {
     DirNonExistantError(String),
     NoFilesFoundError(String),
     ConfigFileError(ConfigFileErrors),
+    BackendNotFoundError(String),
 }
 
 #[derive(Debug)]
@@ -77,6 +78,7 @@ impl fmt::Display for Errors {
                     ConfigFileErrors::Other => write!(f, "{}", template),
                 }
             }
+            Errors::BackendNotFoundError(backend) => write!(f, "Backend for {} not found", backend),
         }
     }
 }

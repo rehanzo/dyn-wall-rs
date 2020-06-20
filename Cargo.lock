@@ -153,7 +153,6 @@ version = "1.1.2"
 dependencies = [
  "alphanumeric-sort",
  "chrono",
- "clap",
  "clokwerk",
  "dirs",
  "run_script",

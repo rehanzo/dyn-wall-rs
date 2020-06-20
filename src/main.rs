@@ -68,11 +68,20 @@ struct Args {
         help = r#"Sends image as argument to command specified. Use alongside listener or custom. If the command itself contains arguments, wrap in quotation ex. dyn-wall-rs -a /path/to/dir -l "betterlockscreen -u""#
     )]
     schedule: Option<String>,
+
+    #[structopt(
+        short,
+        long,
+        value_name = "BACKEND",
+        help = "Will use the specified method as a backend"
+    )]
+    backend: Option<String>,
 }
 
 fn main() {
     let args = Args::from_args();
     let mut program = Arc::new(None);
+    let backend = Arc::new(args.backend);
 
     if let Some(prog) = args.prog {
         if args.auto.is_none() && args.custom.is_none() {
@@ -94,9 +103,13 @@ fn main() {
                 Ok(_) => {
                     let dir = canonicalize(dir).unwrap();
                     let dir = dir.to_str().unwrap();
-                    if let Err(e) =
-                        wallpaper_listener(String::from(dir), dir_count, Arc::clone(&program), None)
-                    {
+                    if let Err(e) = wallpaper_listener(
+                        String::from(dir),
+                        dir_count,
+                        Arc::clone(&program),
+                        None,
+                        Arc::clone(&backend),
+                    ) {
                         eprintln!("{}", e);
                     }
                 }
@@ -142,6 +155,7 @@ fn main() {
                         dir_count,
                         Arc::clone(&program),
                         Some(times),
+                        Arc::clone(&backend),
                     ) {
                         eprintln!("{}", e);
                     }
