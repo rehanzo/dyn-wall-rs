@@ -52,6 +52,7 @@ pub fn wallpaper_current_time(
     dir: &str,
     program: Arc<Option<String>>,
     times: &[Time],
+    backend: Arc<Option<String>>,
 ) -> Result<(), Box<dyn Error>> {
     let mut dir_iter = sorted_dir_iter(dir);
 
@@ -103,12 +104,12 @@ pub fn wallpaper_current_time(
     //what we want in this situation is for the file that is associated with the last time of the day to be sent as an argument to feh,
     //and to the user specified program
     if filepath_set.is_empty() {
-        de_command_spawn(&last_image)?;
+        de_command_spawn(&last_image, backend)?;
 
         prog_handle_loader(&last_image, Arc::clone(&program), &mut prog_handle);
         filepath_set = last_image;
     } else {
-        de_command_spawn(&filepath_set)?;
+        de_command_spawn(&filepath_set, backend)?;
     }
 
     if let Some(prog) = program.as_deref() {
@@ -128,6 +129,7 @@ pub fn wallpaper_listener(
     dir_count: usize,
     program: Arc<Option<String>>,
     times_arg: Option<Vec<Time>>,
+    backend: Arc<Option<String>>,
 ) -> Result<(), Box<dyn Error>> {
     let (_, step_time, mut loop_time, mut times) = listener_setup(dir.as_str());
     let step_time = step_time?;
@@ -144,7 +146,7 @@ pub fn wallpaper_listener(
         Some(t) => times = t,
     }
 
-    wallpaper_current_time(&dir, Arc::clone(&program), &times)?;
+    wallpaper_current_time(&dir, Arc::clone(&program), &times, Arc::clone(&backend))?;
 
     for time in &times {
         let time_fmt = format!("{:02}:{:02}", time.hours, time.mins);
@@ -152,7 +154,8 @@ pub fn wallpaper_listener(
     }
 
     let sched_closure = move || {
-        let result = wallpaper_current_time(&dir, Arc::clone(&program), &times);
+        let result =
+            wallpaper_current_time(&dir, Arc::clone(&program), &times, Arc::clone(&backend));
 
         match result {
             Ok(s) => s,
@@ -271,7 +274,13 @@ fn error_checking(times: &[Time], loop_time: Option<&Time>) -> Result<Time, Box<
 }
 
 #[cfg(windows)]
-fn de_command_spawn(filepath_set: &str) -> Result<(), Box<dyn Error>> {
+fn de_command_spawn(
+    filepath_set: &str,
+    backend: Arc<Option<String>>,
+) -> Result<(), Box<dyn Error>> {
+    if backend.is_some() {
+        eprintln("NOTE: You are unable to select a backend on windows")
+    }
     unsafe {
         let file = OsStr::new(filepath_set)
             .encode_wide()
@@ -295,7 +304,11 @@ fn de_command_spawn(filepath_set: &str) -> Result<(), Box<dyn Error>> {
 }
 
 #[cfg(not(windows))]
-fn de_command_spawn(filepath_set: &str) -> Result<(), Box<dyn Error>> {
+fn de_command_spawn(
+    filepath_set: &str,
+    backend: Arc<Option<String>>,
+) -> Result<(), Box<dyn Error>> {
+    let backend = backend.as_deref();
     let gnome = vec![
         UniCase::new("pantheon"),
         UniCase::new("gnome"),
@@ -324,7 +337,7 @@ fn de_command_spawn(filepath_set: &str) -> Result<(), Box<dyn Error>> {
         Err(_) => String::from("Other"),
         Ok(de) => de,
     };
-    let curr_de = UniCase::new(curr_de.as_str());
+    let mut curr_de = UniCase::new(curr_de.as_str());
 
     let mut feh_handle = Command::new("feh");
     let feh_handle = feh_handle.arg("--bg-scale").arg(filepath_set);
@@ -375,6 +388,12 @@ qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "
     let xfce_script = format!("{}{}{}", xfce_script_beg, filepath_set, xfce_script_end);
     let xfce_script_alt = format!("{}{}{}", xfce_script_alt_beg, filepath_set, xfce_script_end);
 
+    let mut cust_backend = false;
+    if let Some(back) = backend {
+        curr_de = UniCase::new(back);
+        cust_backend = true;
+    }
+
     if gnome.contains(&curr_de) {
         gnome_handle
             .spawn()
@@ -395,12 +414,13 @@ qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "
             .map_err(|_| Errors::ProgramRunError(String::from("XFCE Wallpaper Adjuster")))?;
         run_script::run(xfce_script_alt.as_str(), &vec![], &ScriptOptions::new())
             .map_err(|_| Errors::ProgramRunError(String::from("XFCE Wallpaper Adjuster")))?;
-    } else {
+    } else if !cust_backend || curr_de == UniCase::new("feh") {
         feh_handle
             .spawn()
             .map_err(|_| Errors::ProgramRunError(String::from("Feh")))?;
-    };
-
+    } else {
+        return Err(Errors::BackendNotFoundError(curr_de.to_string()).into());
+    }
     println!("{} has been set as your wallpaper", filepath_set);
     Ok(())
 }
