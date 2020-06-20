@@ -18,55 +18,57 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 use crate::errors::{ConfigFileErrors, Errors};
-use clap::{App, AppSettings, Arg};
 use dirs::config_dir;
 use dyn_wall_rs::{print_schedule, sorted_dir_iter, time_track::Time, wallpaper_listener};
 use std::fs::canonicalize;
 use std::{
     error::Error, fs::create_dir_all, fs::File, io::Read, io::Write, str::FromStr, sync::Arc,
 };
-use walkdir::WalkDir;
 use structopt::StructOpt;
+use walkdir::WalkDir;
 
 pub mod errors;
 pub mod time_track;
 
 #[derive(StructOpt)]
-#[structopt(about = "Helps user set a dynamic wallpaper and lockscreen. Make sure the wallpapers are named in numerical order based on the order you want. For more info and help, go to https://github.com/RAR27/dyn-wall-rs", author = "Rehan Rana <rehanalirana@tuta.io>")]
+#[structopt(
+    about = "Helps user set a dynamic wallpaper and lockscreen. Make sure the wallpapers are named in numerical order based on the order you want. For more info and help, go to https://github.com/RAR27/dyn-wall-rs",
+    author = "Rehan Rana <rehanalirana@tuta.io>"
+)]
 struct Args {
-    #[structopt(short, 
-                long, 
-                value_name = "DIRECTORY", 
-                help = "Sets the wallpaper based on the current time and changes the wallpaper throughout the day based on the time", 
-                conflicts_with = "Schedule",
-                )]
+    #[structopt(
+        short,
+        long,
+        value_name = "DIRECTORY",
+        help = "Sets the wallpaper based on the current time and changes the wallpaper throughout the day based on the time",
+        conflicts_with = "Schedule"
+    )]
     auto: Option<String>,
 
-
-    #[structopt(short, 
-                long, 
-                value_name = "DIRECTORY", 
-                help = r#"Changes wallpapers based on custom times set through a config file created at ~/.config/dyn-wall-rs/config for Unix systems and C:\Users\<USER NAME>\AppData\Roaming\dyn-wall-rs for Windows systems"#,
-                )]
+    #[structopt(
+        short,
+        long,
+        value_name = "DIRECTORY",
+        help = r#"Changes wallpapers based on custom times set through a config file created at ~/.config/dyn-wall-rs/config for Unix systems and C:\Users\<USER NAME>\AppData\Roaming\dyn-wall-rs for Windows systems"#
+    )]
     custom: Option<String>,
 
-
-    #[structopt(short = "l", 
-                long = "lockscreen", 
-                value_name = "COMMAND", 
-                help = r#"Sends image as argument to command specified. Use alongside listener or custom. If the command itself contains arguments, wrap in quotation ex. dyn-wall-rs -a /path/to/dir -l "betterlockscreen -u""#,
-                )]
+    #[structopt(
+        short = "l",
+        long = "lockscreen",
+        value_name = "COMMAND",
+        help = r#"Sends image as argument to command specified. Use alongside listener or custom. If the command itself contains arguments, wrap in quotation ex. dyn-wall-rs -a /path/to/dir -l "betterlockscreen -u""#
+    )]
     prog: Option<String>,
 
-    #[structopt(short, 
-                long, 
-                value_name = "COMMAND", 
-                help = r#"Sends image as argument to command specified. Use alongside listener or custom. If the command itself contains arguments, wrap in quotation ex. dyn-wall-rs -a /path/to/dir -l "betterlockscreen -u""#,
-                )]
+    #[structopt(
+        short,
+        long,
+        value_name = "COMMAND",
+        help = r#"Sends image as argument to command specified. Use alongside listener or custom. If the command itself contains arguments, wrap in quotation ex. dyn-wall-rs -a /path/to/dir -l "betterlockscreen -u""#
+    )]
     schedule: Option<String>,
-
 }
-
 
 fn main() {
     let args = Args::from_args();
@@ -92,12 +94,9 @@ fn main() {
                 Ok(_) => {
                     let dir = canonicalize(dir).unwrap();
                     let dir = dir.to_str().unwrap();
-                    if let Err(e) = wallpaper_listener(
-                        String::from(dir),
-                        dir_count,
-                        Arc::clone(&program),
-                        None,
-                    ) {
+                    if let Err(e) =
+                        wallpaper_listener(String::from(dir), dir_count, Arc::clone(&program), None)
+                    {
                         eprintln!("{}", e);
                     }
                 }
