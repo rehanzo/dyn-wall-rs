@@ -74,7 +74,7 @@ struct Args {
         short,
         long,
         value_name = "BACKEND",
-        help = "Will use the specified method as a backend"
+        help = "Uses the specified method as a backend"
     )]
     backend: Option<String>,
 }
