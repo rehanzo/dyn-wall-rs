@@ -23,10 +23,12 @@ use dirs::config_dir;
 use dyn_wall_rs::{print_schedule, sorted_dir_iter, time_track::Time, wallpaper_listener};
 use std::fs::canonicalize;
 use std::{
-    error::Error, fs::create_dir_all, fs::File, io::Read, io::Write, str::FromStr, sync::Arc,
+    error::Error, fs::create_dir_all, fs::File, io::Read, io::Write, str::FromStr, sync::Arc
 };
 use structopt::StructOpt;
 use walkdir::WalkDir;
+use serde::{Serialize, Deserialize};
+use toml;
 
 pub mod errors;
 pub mod time_track;
@@ -77,6 +79,10 @@ struct Args {
         help = "Uses the specified method as the backend to change the wallpaper"
     )]
     backend: Option<String>,
+}
+#[derive(Deserialize, Serialize)]
+struct Times {
+    times: Vec<String>,
 }
 
 fn main() {
@@ -172,9 +178,8 @@ fn main() {
 }
 
 fn config_parse() -> Result<Vec<Time>, Box<dyn Error>> {
-    let mut times = Vec::new();
     let file = File::open(format!(
-        "{}/dyn-wall-rs/config",
+        "{}/dyn-wall-rs/config.toml",
         config_dir()
             .ok_or_else(|| Errors::ConfigFileError(ConfigFileErrors::NotFound))?
             .to_str()
@@ -192,17 +197,9 @@ fn config_parse() -> Result<Vec<Time>, Box<dyn Error>> {
 
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
-    let contents_split = contents.lines();
-
-    for line in contents_split {
-        if line.starts_with('#') {
-            continue;
-        }
-
-        for time in line.split_whitespace() {
-            times.push(Time::from_str(time)?);
-        }
-    }
+    let times_string: Times = toml::from_str(contents.as_str())?;
+    let times: Result<Vec<_>, _> = times_string.times.iter().map(|time| Time::from_str(time)).collect();
+    let times = times?;
     Ok(times)
 }
 
@@ -214,25 +211,27 @@ fn create_config() -> Result<(), Box<dyn Error>> {
         "{}/dyn-wall-rs/config",
         config_dir.to_str().unwrap()
     ))?;
-    let default_test = "# Write down the times at which you want the wallpaper to change below\n\
-    # The times must be in chronological order\n\
-    # The number of images and the number of times should be equal\n\
-    # ex:\n\
-    # 00:00\n\
-    # 02:00\n\
-    # 04:00\n\
-    # 06:00\n\
-    # 08:00\n\
-    # 10:00\n\
-    # 12:00\n\
-    # 14:00\n\
-    # 16:00\n\
-    # 18:00\n\
-    # 20:00\n\
-    # 22:00\n\
-    # The times are linked to the files in numerical order. This means that in the example above,\n\
-    # 1.png will be your wallpaper at 00:00, 2.png will be your wallpaper at 02:00, etc.\n\
-    # The directory would need 12 images for this example to work, since there are 12 times stated";
+    let default_test = r#"# Write down the times at which you want the wallpaper to change below
+    # The times must be in chronological order
+    # The number of images and the number of times should be equal
+    # ex:
+    # times = [
+    #   "00:00",
+    #   "02:00",
+    #   "04:00",
+    #   "06:00",
+    #   "08:00",
+    #   "10:00",
+    #   "12:00",
+    #   "14:00",
+    #   "16:00",
+    #   "18:00",
+    #   "20:00",
+    #   "22:00",
+    # ]
+    # The times are linked to the files in numerical order. This means that in the example above,
+    # 1.png will be your wallpaper at 00:00, 2.png will be your wallpaper at 02:00, etc.
+    # The directory would need 12 images for this example to work, since there are 12 times stated"#;
 
     config_file.write_all(default_test.as_bytes())?;
     Ok(())

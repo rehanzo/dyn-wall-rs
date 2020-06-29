@@ -26,3 +26,5 @@ unicase = "2.6.0"
 winapi = { version = "0.3.8", features = ["winuser"] }
 structopt = "0.3.15"
 clap = "2.33.1"
+serde = { version = "1.0.114", features = ["derive"] }
+toml = "0.5"
