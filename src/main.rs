@@ -38,6 +38,8 @@ pub mod time_track;
     about = "Helps user set a dynamic wallpaper and lockscreen. Make sure the wallpapers are named in numerical order based on the order you want. For more info and help, go to https://github.com/RAR27/dyn-wall-rs",
     author = "Rehan Rana <rehanalirana@tuta.io>"
 )]
+
+#[derive(Serialize, Deserialize, Debug)]
 struct Args {
     #[structopt(
         short,
@@ -90,11 +92,28 @@ fn main() {
     //convert to clap to add setting to print help message if no argument sent
     //and make help message order same as Args struct order
     let clap = Args::clap()
-        .setting(AppSettings::ArgRequiredElseHelp)
         .setting(AppSettings::DeriveDisplayOrder);
-    let args = Args::from_clap(&clap.get_matches());
+    let mut args = Args::from_clap(&clap.get_matches());
     let mut program = Arc::new(None);
-    let backend = Arc::new(args.backend);
+    let mut backend = Arc::new(None);
+    let cli_args = !(args.auto.is_none() && args.prog.is_none() && args.backend.is_none() && args.custom.is_none() && args.schedule.is_none());
+
+    if !cli_args {
+        let mut file = File::open(format!(
+            "{}/dyn-wall-rs/config.toml",
+            config_dir()
+                .ok_or_else(|| Errors::ConfigFileError(ConfigFileErrors::NotFound)).unwrap()
+                .to_str()
+                .unwrap()
+        )).unwrap();
+
+        let mut contents = String::new();
+        file.read_to_string(&mut contents).unwrap();
+        let times_string = toml::from_str(contents.as_str());
+        let times_string: Args = times_string.unwrap(); 
+        args = times_string;
+        println!("{:?}", args);
+    };
 
     if let Some(prog) = args.prog {
         if args.auto.is_none() && args.custom.is_none() {
@@ -102,6 +121,10 @@ fn main() {
         } else {
             program = Arc::new(Some(String::from(prog)));
         }
+    }
+
+    if let Some(back) = args.backend {
+        backend = Arc::new(Some(back));
     }
 
     if let Some(dir) = args.auto {
@@ -176,6 +199,7 @@ fn main() {
             },
         }
     }
+    
 }
 
 fn config_parse() -> Result<Vec<Time>, Box<dyn Error>> {
