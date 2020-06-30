@@ -21,14 +21,15 @@ use crate::errors::{ConfigFileErrors, Errors};
 use clap::AppSettings;
 use dirs::config_dir;
 use dyn_wall_rs::{print_schedule, sorted_dir_iter, time_track::Time, wallpaper_listener};
+use serde::{Deserialize, Serialize};
 use std::fs::canonicalize;
+use std::process;
 use std::{
-    error::Error, fs::create_dir_all, fs::File, io::Read, io::Write, str::FromStr, sync::Arc
+    error::Error, fs::create_dir_all, fs::File, io::Read, io::Write, str::FromStr, sync::Arc,
 };
 use structopt::StructOpt;
-use walkdir::WalkDir;
-use serde::{Serialize, Deserialize};
 use toml;
+use walkdir::WalkDir;
 
 pub mod errors;
 pub mod time_track;
@@ -38,8 +39,7 @@ pub mod time_track;
     about = "Helps user set a dynamic wallpaper and lockscreen. Make sure the wallpapers are named in numerical order based on the order you want. For more info and help, go to https://github.com/RAR27/dyn-wall-rs",
     author = "Rehan Rana <rehanalirana@tuta.io>"
 )]
-
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 struct Args {
     #[structopt(
         short,
@@ -91,29 +91,26 @@ struct Times {
 fn main() {
     //convert to clap to add setting to print help message if no argument sent
     //and make help message order same as Args struct order
-    let clap = Args::clap()
-        .setting(AppSettings::DeriveDisplayOrder);
+    let clap = Args::clap().setting(AppSettings::DeriveDisplayOrder);
     let mut args = Args::from_clap(&clap.get_matches());
     let mut program = Arc::new(None);
     let mut backend = Arc::new(None);
-    let cli_args = !(args.auto.is_none() && args.prog.is_none() && args.backend.is_none() && args.custom.is_none() && args.schedule.is_none());
+    let cli_args = !((Args{auto: None, custom: None, prog: None, schedule: None, backend: None}) == args);
+    let mut times: Vec<Time> = vec![];
 
-    if !cli_args {
-        let mut file = File::open(format!(
-            "{}/dyn-wall-rs/config.toml",
-            config_dir()
-                .ok_or_else(|| Errors::ConfigFileError(ConfigFileErrors::NotFound)).unwrap()
-                .to_str()
-                .unwrap()
-        )).unwrap();
-
-        let mut contents = String::new();
-        file.read_to_string(&mut contents).unwrap();
-        let times_string = toml::from_str(contents.as_str());
-        let times_string: Args = times_string.unwrap(); 
-        args = times_string;
-        println!("{:?}", args);
-    };
+    match config_parse() {
+        Err(e) => {
+            eprint!("{}", e);
+            process::exit(1);
+        }
+        Ok(s) => {
+            let (temp_times, temp_args) = s;
+            times = temp_times;
+            if !cli_args {
+                args = temp_args;
+            }
+        }
+    }
 
     if let Some(prog) = args.prog {
         if args.auto.is_none() && args.custom.is_none() {
@@ -131,8 +128,27 @@ fn main() {
         let dir = dir.as_str();
         let dir_count = WalkDir::new(dir).into_iter().count() - 1;
 
-        if 1440 % dir_count != 0 || dir_count == 0 {
-            eprintln!("{}", Errors::CountCompatError(dir_count));
+        if times.len() == 0 {
+            if 1440 % dir_count != 0 || dir_count == 0 {
+                eprintln!("{}", Errors::CountCompatError(dir_count));
+            } else {
+                match check_dir_exists(dir) {
+                    Err(e) => eprintln!("{}", e),
+                    Ok(_) => {
+                        let dir = canonicalize(dir).unwrap();
+                        let dir = dir.to_str().unwrap();
+                        if let Err(e) = wallpaper_listener(
+                            String::from(dir),
+                            dir_count,
+                            Arc::clone(&program),
+                            None,
+                            Arc::clone(&backend),
+                        ) {
+                            eprintln!("{}", e);
+                        }
+                    }
+                }
+            }
         } else {
             match check_dir_exists(dir) {
                 Err(e) => eprintln!("{}", e),
@@ -143,7 +159,7 @@ fn main() {
                         String::from(dir),
                         dir_count,
                         Arc::clone(&program),
-                        None,
+                        Some(times),
                         Arc::clone(&backend),
                     ) {
                         eprintln!("{}", e);
@@ -173,11 +189,11 @@ fn main() {
         }
     }
 
-    if let Some(dir) = args.custom {
+    /*if let Some(dir) = args.custom {
         let dir = dir.as_str();
         let dir_count = WalkDir::new(dir).into_iter().count() - 1;
 
-        match config_parse() {
+        match times {
             Err(e) => {
                 eprintln!("{}", e);
             }
@@ -198,11 +214,10 @@ fn main() {
                 }
             },
         }
-    }
-    
+    }*/
 }
 
-fn config_parse() -> Result<Vec<Time>, Box<dyn Error>> {
+fn config_parse() -> Result<(Vec<Time>, Args), Box<dyn Error>> {
     let file = File::open(format!(
         "{}/dyn-wall-rs/config.toml",
         config_dir()
@@ -229,9 +244,22 @@ fn config_parse() -> Result<Vec<Time>, Box<dyn Error>> {
         }
         Ok(s) => s,
     };
-    let times: Result<Vec<_>, _> = times_string.times.iter().map(|time| Time::from_str(time)).collect();
+    let times: Result<Vec<_>, _> = times_string
+        .times
+        .iter()
+        .map(|time| Time::from_str(time))
+        .collect();
     let times = times?;
-    Ok(times)
+
+    let args_string = toml::from_str(contents.as_str());
+    let args_string: Args = match args_string {
+        Err(e) => {
+            return Err(Errors::ConfigFileError(ConfigFileErrors::Other(e.to_string())).into());
+        }
+        Ok(s) => s,
+    };
+
+    Ok((times, args_string))
 }
 
 fn create_config() -> Result<(), Box<dyn Error>> {

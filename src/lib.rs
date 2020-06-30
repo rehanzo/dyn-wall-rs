@@ -186,8 +186,7 @@ fn prog_handle_loader(filepath_set: &str, program: Arc<Option<String>>, prog_han
             if word == "!WALL" {
                 prog_handle.arg(filepath_set);
                 wall_sent = true;
-            }
-            else {
+            } else {
                 prog_handle.arg(word);
             }
         }
@@ -248,7 +247,11 @@ pub fn sorted_dir_iter(dir: &str) -> IntoIter {
         .into_iter()
 }
 
-fn error_checking(times: &[Time], loop_time: Option<&Time>, dir_count: usize) -> Result<Time, Box<dyn Error>> {
+fn error_checking(
+    times: &[Time],
+    loop_time: Option<&Time>,
+    dir_count: usize,
+) -> Result<Time, Box<dyn Error>> {
     let times_iter_err = times.iter();
     let full_time = Time::new(24 * 60);
     let start_range = times
@@ -277,7 +280,7 @@ fn error_checking(times: &[Time], loop_time: Option<&Time>, dir_count: usize) ->
                 return Err(Errors::ConfigFileError(ConfigFileErrors::OutOfOrder).into());
             }
         }
-        if time.total_mins >= 24*60 {
+        if time.total_mins >= 24 * 60 {
             return Err(Errors::ConfigFileError(ConfigFileErrors::OutOfRange).into());
         }
         if checked.contains(time) {
@@ -286,7 +289,7 @@ fn error_checking(times: &[Time], loop_time: Option<&Time>, dir_count: usize) ->
         checked.push(*time);
     }
     if times.len() != dir_count {
-            return Err(Errors::ConfigFileError(ConfigFileErrors::FileTimeMismatch).into());
+        return Err(Errors::ConfigFileError(ConfigFileErrors::FileTimeMismatch).into());
     }
 
     let loop_time = match loop_time {
