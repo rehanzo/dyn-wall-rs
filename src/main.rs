@@ -57,10 +57,10 @@ struct Args {
     custom: Option<String>,
 
     #[structopt(
-        short = "l",
-        long = "lockscreen",
+        short = "p",
+        long = "program",
         value_name = "COMMAND",
-        help = r#"Sends image as argument to command specified. Use alongside listener or custom. If the command itself contains arguments, wrap in quotation ex. dyn-wall-rs -a /path/to/dir -l "betterlockscreen -u""#
+        help = r#"Sends image as argument to command specified. Use alongside listener or custom. If the command itself contains arguments, wrap in quotation ex. dyn-wall-rs -a /path/to/dir -p "betterlockscreen -u""#
     )]
     prog: Option<String>,
 

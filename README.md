@@ -68,7 +68,7 @@ There are a few different ways to use dyn-wall-rs using the different flags, whi
   * **-c, --custom \<DIRECTORY>**\
     Changes your wallpaper based on custom times set through the config file located at `~/.config/dyn-wall-rs/config` for Unix systems, and `C:\Users\<USER NAME>\AppData\Roaming\dyn-wall-rs` on Windows. When this is run for the first time, it will automatically create the config file with detailed instructions on how to set your own times for your wallpaper to change.
 
-  * **-l, --lockscreen \<COMMAND>**\
+  * **-p, --program \<COMMAND>**\
     To have your lockscreen change as well, figure out the command that changes your lockscreen image. This command varies depending on your lockscreen. The command doesn't necessarily have to be a lockscreen command. You can use whatever command you want and have dyn-wall-rs send the wallpaper as an argument (ex. pywal). If the command includes arguments, wrap it in quotation marks.\
     ex. `dyn-wall-rs -a /path/to/dir/ -l "betterlockscreen -u"`
 
