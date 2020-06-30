@@ -13,7 +13,7 @@ A utility to allow you to set a dynamic wallpaper and more.\
 The images used in the gif above are from the collection [Lakeside by Louis Coyle](https://dynamicwallpaper.club/wallpaper/jculsb683ok).
 
 ## Introduction
-The aim of dyn-wall-rs is to provide users with a very simple and easy way to implement a dynamic wallpaper, as well as a dynamic lockscreen, for their system. 
+The aim of dyn-wall-rs is to provide users with a very simple and easy way to implement a dynamic wallpaper, as well as the setup of related things, such as the implementation of a dynamic lockscreen.
 
 
 ## Installation
