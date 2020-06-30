@@ -197,7 +197,13 @@ fn config_parse() -> Result<Vec<Time>, Box<dyn Error>> {
 
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
-    let times_string: Times = toml::from_str(contents.as_str())?;
+    let times_string = toml::from_str(contents.as_str());
+    let times_string: Times = match times_string {
+        Err(e) => {
+            return Err(Errors::ConfigFileError(ConfigFileErrors::Other(e.to_string())).into());
+        }
+        Ok(s) => s,
+    };
     let times: Result<Vec<_>, _> = times_string.times.iter().map(|time| Time::from_str(time)).collect();
     let times = times?;
     Ok(times)
@@ -214,6 +220,7 @@ fn create_config() -> Result<(), Box<dyn Error>> {
     let default_test = r#"# Write down the times at which you want the wallpaper to change below
     # The times must be in chronological order
     # The number of images and the number of times should be equal
+    #
     # ex:
     # times = [
     #   "00:00",
@@ -229,6 +236,7 @@ fn create_config() -> Result<(), Box<dyn Error>> {
     #   "20:00",
     #   "22:00",
     # ]
+    #
     # The times are linked to the files in numerical order. This means that in the example above,
     # 1.png will be your wallpaper at 00:00, 2.png will be your wallpaper at 02:00, etc.
     # The directory would need 12 images for this example to work, since there are 12 times stated"#;
