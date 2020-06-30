@@ -68,9 +68,12 @@ There are a few different ways to use dyn-wall-rs using the different flags, whi
   * **-c, --custom \<DIRECTORY>**\
     Changes your wallpaper based on custom times set through the config file located at `~/.config/dyn-wall-rs/config` for Unix systems, and `C:\Users\<USER NAME>\AppData\Roaming\dyn-wall-rs` on Windows. When this is run for the first time, it will automatically create the config file with detailed instructions on how to set your own times for your wallpaper to change.
 
-  * **-l, --lockscreen \<COMMAND>**\
-    To have your lockscreen change as well, figure out the command that changes your lockscreen image. This command varies depending on your lockscreen. The command doesn't necessarily have to be a lockscreen command. You can use whatever command you want and have dyn-wall-rs send the wallpaper as an argument (ex. pywal). If the command includes arguments, wrap it in quotation marks.\
-    ex. `dyn-wall-rs -a /path/to/dir/ -l "betterlockscreen -u"`
+  * **-p, --program \<COMMAND>**\
+    Will send the wallpaper as an argument to the specified program when the wallpaper is set to change. Using this feature, you can have your lockscreen change alongside your wallpaper. If the command includes arguments, wrap it in quotation marks.\
+    ex. `dyn-wall-rs -a /path/to/dir/ -p "betterlockscreen -u"`
+    
+    To be able to send arguments *after* the wallpaper argument, use `!WALL` to specify where the wallpaper argument is to be placed, and add the rest of the arguments. `WALL!` will be explanded to the path of the wallpaper to be set at the current time.\
+    ex. `dyn-wall-rs -a /path/to/dir -p "betterlockscreen -u !WALL -b 1"`
 
   * **-s, --schedule \<DIRECTORY>**\
     Prints out a schedule of the times at which the wallpaper would change if the auto option were to be used.
@@ -94,6 +97,7 @@ Once you figure out which options you want to use and test it to make sure its w
 
 ## Planned Feature(s)
   * Ability to send multiple commands with the lockscreen argument, so you can do something like have dyn-wall-rs send the image path to pywall as well as betterlockscreen
+  * Wallpaper changes synced to the suns location, rather than just with the time
 
 [RELEASES]: https://github.com/RAR27/dyn-wall-rs/releases
 [DEMO]: https://raw.githubusercontent.com/RAR27/dyn-wall-rs/master/demo.gif 
