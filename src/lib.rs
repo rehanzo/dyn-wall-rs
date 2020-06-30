@@ -178,13 +178,22 @@ pub fn wallpaper_listener(
 }
 
 fn prog_handle_loader(filepath_set: &str, program: Arc<Option<String>>, prog_handle: &mut Command) {
+    let mut wall_sent = false;
     if let Some(prog_str) = program.as_deref() {
         let mut prog_split = prog_str.split_whitespace();
         *prog_handle = Command::new(prog_split.next().unwrap());
         for word in prog_split {
-            prog_handle.arg(word);
+            if word == "!WALL" {
+                prog_handle.arg(filepath_set);
+                wall_sent = true;
+            }
+            else {
+                prog_handle.arg(word);
+            }
         }
-        prog_handle.arg(filepath_set);
+        if wall_sent == false {
+            prog_handle.arg(filepath_set);
+        }
     }
 }
 
