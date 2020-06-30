@@ -55,9 +55,12 @@ pub fn wallpaper_current_time(
     backend: Arc<Option<String>>,
 ) -> Result<(), Box<dyn Error>> {
     let mut dir_iter = sorted_dir_iter(dir);
+    let mut dir_count = sorted_dir_iter(dir);
 
     dir_iter.next();
+    dir_count.next();
 
+    let dir_count: usize = dir_count.count();
     let mut prog_handle: Command = Command::new("");
     let mut times_iter = times.iter();
     let curr_time = Time::new(Local::now().hour() * 60 + Local::now().minute());
@@ -68,7 +71,7 @@ pub fn wallpaper_current_time(
     let mut filepath_set: String = String::new();
     let mut last_image = String::new();
 
-    let mut loop_time = error_checking(times, loop_time)?;
+    let mut loop_time = error_checking(times, loop_time, dir_count)?;
 
     //this loop is to find where the current time lays, and adjust the wallpaper based on that
     for file in dir_iter {
@@ -236,7 +239,7 @@ pub fn sorted_dir_iter(dir: &str) -> IntoIter {
         .into_iter()
 }
 
-fn error_checking(times: &[Time], loop_time: Option<&Time>) -> Result<Time, Box<dyn Error>> {
+fn error_checking(times: &[Time], loop_time: Option<&Time>, dir_count: usize) -> Result<Time, Box<dyn Error>> {
     let times_iter_err = times.iter();
     let full_time = Time::new(24 * 60);
     let start_range = times
@@ -247,6 +250,7 @@ fn error_checking(times: &[Time], loop_time: Option<&Time>) -> Result<Time, Box<
     let mut curr_range = start_range.to_owned();
     let mut curr_range_other = start_range.to_owned();
     let mut other_inited = false;
+    let mut checked = vec![];
     for time in times_iter_err {
         if *time > *start_range && *time > curr_range {
             curr_range = *time;
@@ -264,6 +268,16 @@ fn error_checking(times: &[Time], loop_time: Option<&Time>) -> Result<Time, Box<
                 return Err(Errors::ConfigFileError(ConfigFileErrors::OutOfOrder).into());
             }
         }
+        if time.total_mins >= 24*60 {
+            return Err(Errors::ConfigFileError(ConfigFileErrors::OutOfRange).into());
+        }
+        if checked.contains(time) {
+            return Err(Errors::ConfigFileError(ConfigFileErrors::DuplicatesFound).into());
+        }
+        checked.push(*time);
+    }
+    if times.len() != dir_count {
+            return Err(Errors::ConfigFileError(ConfigFileErrors::FileTimeMismatch).into());
     }
 
     let loop_time = match loop_time {

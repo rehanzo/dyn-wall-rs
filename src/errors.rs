@@ -45,7 +45,9 @@ pub enum ConfigFileErrors {
     FormattingError,
     NotFound,
     OutOfOrder,
-    Other,
+    OutOfRange,
+    DuplicatesFound,
+    Other(String),
 }
 
 impl error::Error for Errors {}
@@ -71,11 +73,13 @@ impl fmt::Display for Errors {
                 let template = "Error with config file";
                 match cause {
                     ConfigFileErrors::Empty => write!(f, "{}: config file is empty", template),
-                    ConfigFileErrors::FileTimeMismatch => write!(f, "{}: there are more files in the directory than time slots in the config file", template),
+                    ConfigFileErrors::FileTimeMismatch => write!(f, "{}: the number of times listed in the config file does not equal the number of files in directory", template),
                     ConfigFileErrors::FormattingError => write!(f, "{}: config file not formatted correctly", template),
                     ConfigFileErrors::NotFound => write!(f, "{}: config file not found. One has been created at {}{}dyn-wall-rs{}config for you to edit", template, config_dir().expect("No config directory found").to_str().unwrap(), DIR_SLASH, DIR_SLASH),
                     ConfigFileErrors::OutOfOrder => write!(f, "{}: the order of the times are incorrect", template),
-                    ConfigFileErrors::Other => write!(f, "{}", template),
+                    ConfigFileErrors::OutOfRange => write!(f, "{}: Custom times should be between 0 - 23:59", template), 
+                    ConfigFileErrors::DuplicatesFound => write!(f, "{}: duplicate times found", template),
+                    ConfigFileErrors::Other(other_err) => write!(f, "{}: {}", template, other_err),
                 }
             }
             Errors::BackendNotFoundError(backend) => write!(f, "Backend for {} not found", backend),
