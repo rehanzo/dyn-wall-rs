@@ -34,7 +34,7 @@ use walkdir::WalkDir;
 pub mod errors;
 pub mod time_track;
 
-#[derive(StructOpt)]
+#[derive(StructOpt, Default)]
 #[structopt(
     about = "Helps user set a dynamic wallpaper and lockscreen. Make sure the wallpapers are named in numerical order based on the order you want. For more info and help, go to https://github.com/RAR27/dyn-wall-rs",
     author = "Rehan Rana <rehanalirana@tuta.io>"
@@ -87,12 +87,7 @@ fn main() {
     let mut args = Args::from_clap(&clap.get_matches());
     let mut program = Arc::new(None);
     let mut backend = Arc::new(None);
-    let cli_args = !((Args {
-        directory: None,
-        program: None,
-        schedule: None,
-        backend: None,
-    }) == args);
+    let cli_args = !(Args::default() == args);
     let mut times: Vec<Time> = vec![];
 
     match config_parse(cli_args) {
@@ -108,6 +103,9 @@ fn main() {
             }
             if !cli_args {
                 args = temp_args;
+                if Args::default() == args {
+                    eprintln!("Directory not specified");
+                }
             }
         }
     }
@@ -115,7 +113,7 @@ fn main() {
     if let Some(prog) = args.program {
         if args.directory.is_none() {
             eprintln!(
-                "Specifying a program is to be used along with the specification of a directory"
+                "Error: The program option is to be used with a specified directory"
             );
         } else {
             program = Arc::new(Some(String::from(prog)));
@@ -125,7 +123,7 @@ fn main() {
     if let Some(back) = args.backend {
         backend = Arc::new(Some(back));
         if args.directory.is_none() {
-            eprintln!("The backend option is to be used with a specified directory");
+            eprintln!("Error: The backend option is to be used with a specified directory");
         }
     }
 
@@ -200,13 +198,19 @@ fn config_parse(cli_args: bool) -> Result<(Option<Vec<Time>>, Args), Box<dyn Err
     ))
     .map_err(|_| Errors::ConfigFileError(ConfigFileErrors::NotFound));
 
-    let mut file = match file {
+    let file = match file {
         Ok(s) => Ok(s),
         Err(e) => {
             create_config()?;
             Err(e)
         }
-    }?;
+    };
+
+    if file.is_err() && cli_args {
+        println!("A config file has been created");
+        return Ok((None, Args::default()))
+    }
+    let mut file = file.unwrap();
 
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
@@ -224,7 +228,7 @@ fn config_parse(cli_args: bool) -> Result<(Option<Vec<Time>>, Args), Box<dyn Err
     }
 
     let args_string = toml::from_str(contents.as_str());
-    let args_string: Args = match args_string {
+    let args_serialized: Args = match args_string {
         Err(e) => {
             return Err(Errors::ConfigFileError(ConfigFileErrors::Other(e.to_string())).into());
         }
@@ -232,19 +236,19 @@ fn config_parse(cli_args: bool) -> Result<(Option<Vec<Time>>, Args), Box<dyn Err
     };
 
     let times_string = toml::from_str(contents.as_str());
-    let times_string: Times = match times_string {
+    let times_serialized: Times = match times_string {
         Err(e) => {
             return Err(Errors::ConfigFileError(ConfigFileErrors::Other(e.to_string())).into());
         }
         Ok(s) => s,
     };
 
-    match times_string.times {
-        None => Ok((None, args_string)),
+    match times_serialized.times {
+        None => Ok((None, args_serialized)),
         Some(s) => {
             let times: Result<Vec<_>, _> = s.iter().map(|time| Time::from_str(time)).collect();
             let times = times?;
-            Ok((Some(times), args_string))
+            Ok((Some(times), args_serialized))
         }
     }
 }
@@ -257,34 +261,34 @@ fn create_config() -> Result<(), Box<dyn Error>> {
         "{}/dyn-wall-rs/config.toml",
         config_dir.to_str().unwrap()
     ))?;
-    let default_test = r#"# Write down the times at which you want the wallpaper to change below
-    # The times must be in chronological order
-    # The number of images and the number of times should be equal
-    #
-    # ex:
-    # times = [
-    #   "00:00",
-    #   "02:00",
-    #   "04:00",
-    #   "06:00",
-    #   "08:00",
-    #   "10:00",
-    #   "12:00",
-    #   "14:00",
-    #   "16:00",
-    #   "18:00",
-    #   "20:00",
-    #   "22:00",
-    # ]
-    #
-    # The times are linked to the files in numerical order. This means that in the example above,
-    # 1.png will be your wallpaper at 00:00, 2.png will be your wallpaper at 02:00, etc.
-    # The directory would need 12 images for this example to work, since there are 12 times stated
-    # Config options are stated below; uncomment them and fill them as you would from the command line.
-    #times = []
-    #directory = "/path/to/dir"
-    #backend = "backend"
-    #program = "command""#;
+    let default_test = r#"# Type the times at which you want the wallpaper to change as shown in the example below
+# The times must be in chronological order
+# The number of images and the number of times should be equal
+#
+# ex:
+# times = [
+#   "00:00",
+#   "02:00",
+#   "04:00",
+#   "06:00",
+#   "08:00",
+#   "10:00",
+#   "12:00",
+#   "14:00",
+#   "16:00",
+#   "18:00",
+#   "20:00",
+#   "22:00",
+# ]
+#
+# The times are linked to the files in numerical order. This means that in the example above,
+# 1.png will be your wallpaper at 00:00, 2.png will be your wallpaper at 02:00, etc.
+# The directory would need 12 images for this example to work, since there are 12 times stated
+# Config options are stated below; uncomment them and fill them as you would from the command line.
+#times = []
+#directory = "/path/to/dir"
+#backend = "backend"
+#program = "command""#;
 
     config_file.write_all(default_test.as_bytes())?;
     Ok(())
