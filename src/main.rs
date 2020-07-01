@@ -280,7 +280,7 @@ fn create_config() -> Result<(), Box<dyn Error>> {
     # The times are linked to the files in numerical order. This means that in the example above,
     # 1.png will be your wallpaper at 00:00, 2.png will be your wallpaper at 02:00, etc.
     # The directory would need 12 images for this example to work, since there are 12 times stated
-    # Other config options are stated below; uncomment them and fill them as you would from the command line.
+    # Config options are stated below; uncomment them and fill them as you would from the command line.
     #times = []
     #directory = "/path/to/dir"
     #backend = "backend"
