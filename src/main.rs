@@ -45,24 +45,17 @@ struct Args {
         short,
         long,
         value_name = "DIRECTORY",
-        help = "Sets the wallpaper based on the current time and changes the wallpaper throughout the day based on the time",
+        help = "Sets the wallpaper based on the current time and changes the wallpaper throughout the day. The wallpaper will change based on the user specified times within the config file or, if custom timings are not set, it will automatically divide the wallpapers into equal parts throughout the day.",
         conflicts_with = "Schedule"
     )]
-    auto: Option<String>,
-
-    #[structopt(
-        short,
-        long,
-        value_name = "DIRECTORY",
-        help = r#"Changes wallpapers based on custom times set through a config file created at ~/.config/dyn-wall-rs/config for Unix systems and C:\Users\<USER NAME>\AppData\Roaming\dyn-wall-rs for Windows systems"#
-    )]
-    custom: Option<String>,
+    directory: Option<String>,
 
     #[structopt(
         short = "p",
         long = "program",
         value_name = "COMMAND",
-        help = r#"Sends image as argument to command specified. Use alongside listener or custom. If the command itself contains arguments, wrap in quotation ex. dyn-wall-rs -a /path/to/dir -p "betterlockscreen -u""#
+        help = r#"Sends image as argument to command specified. Use alongside listener or custom. If the command itself contains arguments, wrap in quotation ex. dyn-wall-rs -a /path/to/dir -l "betterlockscreen -u"
+If arguments after wallpaper argument are needed, use !WALL as a placeholder for wallpaper argument, and add rest of arguments ex. dyn-wall-rs -a /path/to/dir -p "betterlockscreen -u !WALL -b 1""#
     )]
     prog: Option<String>,
 
@@ -70,8 +63,7 @@ struct Args {
         short,
         long,
         value_name = "COMMAND",
-        help = r#"Sends image as argument to command specified. Use alongside listener or custom. If the command itself contains arguments, wrap in quotation ex. dyn-wall-rs -a /path/to/dir -l "betterlockscreen -u"
-If arguments after wallpaper argument are needed, use !WALL as a placeholder for wallpaper argument, and add rest of arguments ex. dyn-wall-rs -a /path/to/dir -p "betterlockscreen -u !WALL -b 1""#
+        help = "Will present you with a schedule of when your wallpaper will change if you have not set custom times in the config file"
     )]
     schedule: Option<String>,
 
@@ -85,7 +77,7 @@ If arguments after wallpaper argument are needed, use !WALL as a placeholder for
 }
 #[derive(Deserialize, Serialize)]
 struct Times {
-    times: Vec<String>,
+    times: Option<Vec<String>>,
 }
 
 fn main() {
@@ -95,7 +87,7 @@ fn main() {
     let mut args = Args::from_clap(&clap.get_matches());
     let mut program = Arc::new(None);
     let mut backend = Arc::new(None);
-    let cli_args = !((Args{auto: None, custom: None, prog: None, schedule: None, backend: None}) == args);
+    let cli_args = !((Args{directory: None, prog: None, schedule: None, backend: None}) == args);
     let mut times: Vec<Time> = vec![];
 
     match config_parse() {
@@ -104,8 +96,11 @@ fn main() {
             process::exit(1);
         }
         Ok(s) => {
+            //rust doesn't let you assign when deconstructing, so this workaround is required
             let (temp_times, temp_args) = s;
-            times = temp_times;
+            if let Some(s) = temp_times {
+                times = s;
+            }
             if !cli_args {
                 args = temp_args;
             }
@@ -113,8 +108,8 @@ fn main() {
     }
 
     if let Some(prog) = args.prog {
-        if args.auto.is_none() && args.custom.is_none() {
-            eprintln!("This option is to be used along with auto or custom");
+        if args.directory.is_none() {
+            eprintln!("Specifying a program is to be used along with the specification of a directory");
         } else {
             program = Arc::new(Some(String::from(prog)));
         }
@@ -124,7 +119,7 @@ fn main() {
         backend = Arc::new(Some(back));
     }
 
-    if let Some(dir) = args.auto {
+    if let Some(dir) = args.directory {
         let dir = dir.as_str();
         let dir_count = WalkDir::new(dir).into_iter().count() - 1;
 
@@ -188,36 +183,9 @@ fn main() {
             }
         }
     }
-
-    /*if let Some(dir) = args.custom {
-        let dir = dir.as_str();
-        let dir_count = WalkDir::new(dir).into_iter().count() - 1;
-
-        match times {
-            Err(e) => {
-                eprintln!("{}", e);
-            }
-            Ok(times) => match check_dir_exists(dir) {
-                Err(e) => eprintln!("{}", e),
-                Ok(_) => {
-                    let dir = canonicalize(dir).unwrap();
-                    let dir = dir.to_str().unwrap();
-                    if let Err(e) = wallpaper_listener(
-                        String::from(dir),
-                        dir_count,
-                        Arc::clone(&program),
-                        Some(times),
-                        Arc::clone(&backend),
-                    ) {
-                        eprintln!("{}", e);
-                    }
-                }
-            },
-        }
-    }*/
 }
 
-fn config_parse() -> Result<(Vec<Time>, Args), Box<dyn Error>> {
+fn config_parse() -> Result<(Option<Vec<Time>>, Args), Box<dyn Error>> {
     let file = File::open(format!(
         "{}/dyn-wall-rs/config.toml",
         config_dir()
@@ -237,19 +205,6 @@ fn config_parse() -> Result<(Vec<Time>, Args), Box<dyn Error>> {
 
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
-    let times_string = toml::from_str(contents.as_str());
-    let times_string: Times = match times_string {
-        Err(e) => {
-            return Err(Errors::ConfigFileError(ConfigFileErrors::Other(e.to_string())).into());
-        }
-        Ok(s) => s,
-    };
-    let times: Result<Vec<_>, _> = times_string
-        .times
-        .iter()
-        .map(|time| Time::from_str(time))
-        .collect();
-    let times = times?;
 
     let args_string = toml::from_str(contents.as_str());
     let args_string: Args = match args_string {
@@ -259,7 +214,25 @@ fn config_parse() -> Result<(Vec<Time>, Args), Box<dyn Error>> {
         Ok(s) => s,
     };
 
-    Ok((times, args_string))
+    let times_string = toml::from_str(contents.as_str());
+    let times_string: Times = match times_string {
+        Err(e) => {
+            return Err(Errors::ConfigFileError(ConfigFileErrors::Other(e.to_string())).into());
+        }
+        Ok(s) => s,
+    };
+
+    match times_string.times {
+        None => Ok((None, args_string)),
+        Some(s) => {
+            let times: Result<Vec<_>, _> = s
+                .iter()
+                .map(|time| Time::from_str(time))
+                .collect();
+            let times = times?;
+            Ok((Some(times), args_string))
+        }
+    }
 }
 
 fn create_config() -> Result<(), Box<dyn Error>> {
