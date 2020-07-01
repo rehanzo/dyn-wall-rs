@@ -87,7 +87,12 @@ fn main() {
     let mut args = Args::from_clap(&clap.get_matches());
     let mut program = Arc::new(None);
     let mut backend = Arc::new(None);
-    let cli_args = !((Args{directory: None, program: None, schedule: None, backend: None}) == args);
+    let cli_args = !((Args {
+        directory: None,
+        program: None,
+        schedule: None,
+        backend: None,
+    }) == args);
     let mut times: Vec<Time> = vec![];
 
     match config_parse(cli_args) {
@@ -107,9 +112,11 @@ fn main() {
         }
     }
 
-    if let Some(prog) = args.program{
+    if let Some(prog) = args.program {
         if args.directory.is_none() {
-            eprintln!("Specifying a program is to be used along with the specification of a directory");
+            eprintln!(
+                "Specifying a program is to be used along with the specification of a directory"
+            );
         } else {
             program = Arc::new(Some(String::from(prog)));
         }
@@ -126,13 +133,13 @@ fn main() {
         let dir = dir.as_str();
         let dir_count = WalkDir::new(dir).into_iter().count() - 1;
 
-        if times.len() == 0 {
-            if 1440 % dir_count != 0 || dir_count == 0 {
-                eprintln!("{}", Errors::CountCompatError(dir_count));
-            } else {
-                match check_dir_exists(dir) {
-                    Err(e) => eprintln!("{}", e),
-                    Ok(_) => {
+        match check_dir_exists(dir) {
+            Err(e) => eprintln!("{}", e),
+            Ok(_) => {
+                if times.len() == 0 {
+                    if 1440 % dir_count != 0 || dir_count == 0 {
+                        eprintln!("{}", Errors::CountCompatError(dir_count));
+                    } else {
                         let dir = canonicalize(dir).unwrap();
                         let dir = dir.to_str().unwrap();
                         if let Err(e) = wallpaper_listener(
@@ -145,12 +152,7 @@ fn main() {
                             eprintln!("{}", e);
                         }
                     }
-                }
-            }
-        } else {
-            match check_dir_exists(dir) {
-                Err(e) => eprintln!("{}", e),
-                Ok(_) => {
+                } else {
                     let dir = canonicalize(dir).unwrap();
                     let dir = dir.to_str().unwrap();
                     if let Err(e) = wallpaper_listener(
@@ -240,10 +242,7 @@ fn config_parse(cli_args: bool) -> Result<(Option<Vec<Time>>, Args), Box<dyn Err
     match times_string.times {
         None => Ok((None, args_string)),
         Some(s) => {
-            let times: Result<Vec<_>, _> = s
-                .iter()
-                .map(|time| Time::from_str(time))
-                .collect();
+            let times: Result<Vec<_>, _> = s.iter().map(|time| Time::from_str(time)).collect();
             let times = times?;
             Ok((Some(times), args_string))
         }

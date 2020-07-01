@@ -82,7 +82,7 @@ impl fmt::Display for Errors {
                     ConfigFileErrors::Other(other_err) => write!(f, "{}: {}", template, other_err),
                 }
             }
-            Errors::BackendNotFoundError(backend) => write!(f, "Backend for {} not found", backend),
+            Errors::BackendNotFoundError(backend) => write!(f, "Backend '{}' not found", backend),
         }
     }
 }
