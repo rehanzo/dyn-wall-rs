@@ -90,7 +90,7 @@ fn main() {
     let cli_args = !((Args{directory: None, program: None, schedule: None, backend: None}) == args);
     let mut times: Vec<Time> = vec![];
 
-    match config_parse() {
+    match config_parse(cli_args) {
         Err(e) => {
             eprint!("{}", e);
             process::exit(1);
@@ -117,6 +117,9 @@ fn main() {
 
     if let Some(back) = args.backend {
         backend = Arc::new(Some(back));
+        if args.directory.is_none() {
+            eprintln!("The backend option is to be used with a specified directory");
+        }
     }
 
     if let Some(dir) = args.directory {
@@ -185,7 +188,7 @@ fn main() {
     }
 }
 
-fn config_parse() -> Result<(Option<Vec<Time>>, Args), Box<dyn Error>> {
+fn config_parse(cli_args: bool) -> Result<(Option<Vec<Time>>, Args), Box<dyn Error>> {
     let file = File::open(format!(
         "{}/dyn-wall-rs/config.toml",
         config_dir()
@@ -205,6 +208,18 @@ fn config_parse() -> Result<(Option<Vec<Time>>, Args), Box<dyn Error>> {
 
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
+
+    if !cli_args {
+        let mut empty = true;
+        for line in contents.lines() {
+            if !line.contains("#") {
+                empty = false;
+            }
+        }
+        if empty {
+            return Err(Errors::ConfigFileError(ConfigFileErrors::Empty).into());
+        }
+    }
 
     let args_string = toml::from_str(contents.as_str());
     let args_string: Args = match args_string {
