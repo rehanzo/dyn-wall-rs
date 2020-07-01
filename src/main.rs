@@ -57,7 +57,7 @@ struct Args {
         help = r#"Sends image as argument to command specified. Use alongside listener or custom. If the command itself contains arguments, wrap in quotation ex. dyn-wall-rs -a /path/to/dir -l "betterlockscreen -u"
 If arguments after wallpaper argument are needed, use !WALL as a placeholder for wallpaper argument, and add rest of arguments ex. dyn-wall-rs -a /path/to/dir -p "betterlockscreen -u !WALL -b 1""#
     )]
-    prog: Option<String>,
+    program: Option<String>,
 
     #[structopt(
         short,
@@ -87,7 +87,7 @@ fn main() {
     let mut args = Args::from_clap(&clap.get_matches());
     let mut program = Arc::new(None);
     let mut backend = Arc::new(None);
-    let cli_args = !((Args{directory: None, prog: None, schedule: None, backend: None}) == args);
+    let cli_args = !((Args{directory: None, program: None, schedule: None, backend: None}) == args);
     let mut times: Vec<Time> = vec![];
 
     match config_parse() {
@@ -107,7 +107,7 @@ fn main() {
         }
     }
 
-    if let Some(prog) = args.prog {
+    if let Some(prog) = args.program{
         if args.directory.is_none() {
             eprintln!("Specifying a program is to be used along with the specification of a directory");
         } else {
@@ -240,7 +240,7 @@ fn create_config() -> Result<(), Box<dyn Error>> {
         config_dir().ok_or_else(|| Errors::ConfigFileError(ConfigFileErrors::NotFound))?;
     create_dir_all(format!("{}/dyn-wall-rs", config_dir.to_str().unwrap()))?;
     let mut config_file = File::create(format!(
-        "{}/dyn-wall-rs/config",
+        "{}/dyn-wall-rs/config.toml",
         config_dir.to_str().unwrap()
     ))?;
     let default_test = r#"# Write down the times at which you want the wallpaper to change below
@@ -265,7 +265,12 @@ fn create_config() -> Result<(), Box<dyn Error>> {
     #
     # The times are linked to the files in numerical order. This means that in the example above,
     # 1.png will be your wallpaper at 00:00, 2.png will be your wallpaper at 02:00, etc.
-    # The directory would need 12 images for this example to work, since there are 12 times stated"#;
+    # The directory would need 12 images for this example to work, since there are 12 times stated
+    # Other config options are stated below; uncomment them and fill them as you would from the command line.
+    #times = []
+    #directory = "/path/to/dir"
+    #backend = "backend"
+    #program = "command""#;
 
     config_file.write_all(default_test.as_bytes())?;
     Ok(())
