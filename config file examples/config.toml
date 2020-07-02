@@ -1,0 +1,11 @@
+times = [
+    "00:00"
+    "02:00"
+    "04:00"
+    "08:30"
+    "12:44"
+    "20:00"
+]
+directory = "/home/popeye/pics\ of\ spinach"
+program = "betterlockscreen -u"
+backend = "feh"
