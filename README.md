@@ -60,20 +60,19 @@ cargo install dyn-wall-rs --force
 ## Usage
 Firstly, create a directory and place all the wallpapers you want to cycle through within the directory. Make sure that they are named in numerical order ex. first wallpaper is named 1.png, second wallpaper is named 2.png, etc.
 
-There are a few different ways to use dyn-wall-rs using the different flags, which are described in detail below
-  * **-a, --auto \<DIRECTORY>**\
-    Changes your wallpaper throughout the day in even increments.\
-    For example if I have 12 wallpapers in my wallpaper directory, this option would change the wallpaper every 2 hours (24/12 = 2). Make sure the number of wallpapers in the directory can divide evenly into 1440 (number of minutes in a day). If it doesn't divide evenly into 1440, you may want to use the custom option.
-
-  * **-c, --custom \<DIRECTORY>**\
-    Changes your wallpaper based on custom times set through the config file located at `~/.config/dyn-wall-rs/config` for Unix systems, and `C:\Users\<USER NAME>\AppData\Roaming\dyn-wall-rs` on Windows. When this is run for the first time, it will automatically create the config file with detailed instructions on how to set your own times for your wallpaper to change.
+### Command Line
+There are a few different ways to use dyn-wall-rs from the command line using the different flags, which are described in detail below
+  * **-d, --directory \<DIRECTORY>**\
+    Changes your wallpaper throughout the day with the images in the directory. If custom timings are not specified through the config file, it changes in even increments throughout the day.\
+    For example, if I have 12 wallpapers in my wallpaper directory, this option would change the wallpaper every 2 hours (24/12 = 2). Make sure the number of wallpapers in the directory can divide evenly into 1440 (number of minutes in a day). If it doesn't divide evenly into 1440, you may want to place custom timings in the configuration file.\
+    If timings are specified through the configuration file, then the wallpapers will change based on those timings. More information on custom timings can be found within the automatically created config file.
 
   * **-p, --program \<COMMAND>**\
     Will send the wallpaper as an argument to the specified program when the wallpaper is set to change. Using this feature, you can have your lockscreen change alongside your wallpaper. If the command includes arguments, wrap it in quotation marks.\
-    ex. `dyn-wall-rs -a /path/to/dir/ -p "betterlockscreen -u"`
+    ex. `dyn-wall-rs -d /path/to/dir/ -p "betterlockscreen -u"`
     
-    To be able to send arguments *after* the wallpaper argument, use `!WALL` to specify where the wallpaper argument is to be placed, and add the rest of the arguments. `WALL!` will be explanded to the path of the wallpaper to be set at the current time.\
-    ex. `dyn-wall-rs -a /path/to/dir -p "betterlockscreen -u !WALL -b 1"`
+    To be able to send arguments *after* the wallpaper argument, use `!WALL` to specify where the wallpaper argument is to be placed, and add the rest of the arguments. `!WALL` will be explanded to the path of the wallpaper to be set at the current time.\
+    ex. `dyn-wall-rs -d /path/to/dir -p "betterlockscreen -u !WALL -b 1"`
 
   * **-s, --schedule \<DIRECTORY>**\
     Prints out a schedule of the times at which the wallpaper would change if the auto option were to be used.
@@ -82,6 +81,11 @@ There are a few different ways to use dyn-wall-rs using the different flags, whi
     Uses the specified method as the backend to change the wallpaper. Type a supported DE name to use that DE's wallpaper changing command, or type `feh` to use feh. Case insensitive.
 
 Once you figure out which options you want to use and test it to make sure its working how you want it to, have the command autostart on boot.
+
+### Config File
+dyn-wall-rs can also be configured through a config file. When you run the program for the first time, a config file will be created at `~/.config/dyn-wall-rs/config.toml` for Unix systems, and `C:\Users\<USER NAME>\AppData\Roaming\dyn-wall-rs.toml` on Windows. 
+
+Through this config file, you can use the same configuration options as through the command line, as well as use your own custom timings. If you would like to use custom timings, but configure everything else through the command line, you are able to do so. More details can be found in the automatically created config file.
 
 ## Supported Desktop Environments
   * Windows
