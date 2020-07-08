@@ -18,7 +18,7 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 use crate::time_track::Time;
-use chrono::{Local, Timelike};
+use chrono::{Local, Timelike, Utc};
 use clokwerk::{Scheduler, TimeUnits};
 use std::{env, error::Error, process, process::Command, sync::Arc, thread::sleep, time::Duration};
 use walkdir::{IntoIter, WalkDir};
@@ -26,6 +26,7 @@ use walkdir::{IntoIter, WalkDir};
 use crate::errors::{ConfigFileErrors, Errors};
 use run_script::ScriptOptions;
 use unicase::UniCase;
+use sun_times;
 
 #[cfg(windows)]
 use std::ffi::OsStr;
@@ -449,4 +450,30 @@ qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "
     }
     println!("{} has been set as your wallpaper", filepath_set);
     Ok(())
+}
+
+pub fn sun_timings(lat: f64, lon: f64, elevation: f64, dir_count_day: u32, dir_count_night: u32) -> Vec<Time> {
+    let mut times: Vec<Time> = vec![];
+    let (sunrise, sunset) = sun_times::sun_times(Utc::today(), lat, lon, elevation);
+    let (sunset, sunrise) = (sunset.with_timezone(&Local), sunrise.with_timezone(&Local));
+    let sunset = Time::new((sunset.hour() * 60) + sunset.minute());
+    let sunrise = Time::new((sunrise.hour() * 60) + sunrise.minute());
+    let step_time_day = Time::new((sunset.total_mins - sunrise.total_mins)/dir_count_day);
+    let step_time_night = Time::new((1440 - (sunset.total_mins - sunrise.total_mins))/dir_count_night);
+    let mut loop_time_night: Time; 
+    let mut loop_time_day = sunrise.to_owned();
+    println!("{}", step_time_day.total_mins * dir_count_day + step_time_night.total_mins * dir_count_night);
+
+    while loop_time_day < sunset {
+        times.push(loop_time_day);
+        loop_time_day += step_time_day;
+    }
+    loop_time_night = loop_time_day.to_owned();
+
+    while loop_time_night < (sunrise + Time::new(1440)){
+        times.push(loop_time_night);
+        loop_time_night += step_time_night;
+    }
+    println!("{:?}", times);
+    times
 }

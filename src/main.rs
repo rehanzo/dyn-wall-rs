@@ -20,7 +20,7 @@
 use crate::errors::{ConfigFileErrors, Errors};
 use clap::AppSettings;
 use dirs::config_dir;
-use dyn_wall_rs::{print_schedule, sorted_dir_iter, time_track::Time, wallpaper_listener};
+use dyn_wall_rs::{print_schedule, sorted_dir_iter, time_track::Time, wallpaper_listener, sun_timings};
 use serde::{Deserialize, Serialize};
 use std::fs::canonicalize;
 use std::process;
@@ -89,6 +89,8 @@ fn main() {
     let mut backend = Arc::new(None);
     let cli_args = !(Args::default() == args);
     let mut times: Vec<Time> = vec![];
+
+    sun_timings(43.9, -79.0, 90.0, 4, 4);
 
     match config_parse(cli_args) {
         Err(e) => {
