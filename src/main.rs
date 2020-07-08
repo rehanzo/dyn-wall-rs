@@ -74,7 +74,34 @@ If arguments after wallpaper argument are needed, use !WALL as a placeholder for
         help = "Uses the specified method as the backend to change the wallpaper"
     )]
     backend: Option<String>,
+
+    #[structopt(
+        long,
+        value_name = "LAT",
+        help = "Uses the specified method as the backend to change the wallpaper"
+        requires_all = &["long", "elevation"],
+    )]
+    lat: f64,
+
+    #[structopt(
+        long,
+        value_name = "LONG",
+        help = "Uses the specified method as the backend to change the wallpaper"
+        requires_all = &["lat", "elevation"],
+    )]
+    long: f64,
+
+    #[structopt(
+        long,
+        value_name = "ELEVATION",
+        help = "Uses the specified method as the backend to change the wallpaper"
+        requires_all = &["lat", "long"],
+    )]
+    elevation: f64,
 }
+
+
+
 #[derive(Deserialize, Serialize)]
 struct Times {
     times: Option<Vec<String>>,
@@ -89,8 +116,6 @@ fn main() {
     let mut backend = Arc::new(None);
     let cli_args = !(Args::default() == args);
     let mut times: Vec<Time> = vec![];
-
-    sun_timings(43.9, -79.0, 90.0, 4, 4);
 
     match config_parse(cli_args) {
         Err(e) => {
@@ -112,6 +137,8 @@ fn main() {
         }
     }
 
+    
+
     if let Some(prog) = args.program {
         if args.directory.is_none() {
             eprintln!(
@@ -132,6 +159,9 @@ fn main() {
     if let Some(dir) = args.directory {
         let dir = dir.as_str();
         let dir_count = WalkDir::new(dir).into_iter().count() - 1;
+        let dir = canonicalize(dir).unwrap();
+        let dir = dir.to_str().unwrap();
+        let mut times_arg: Option<Vec<Time>> = None;
 
         match check_dir_exists(dir) {
             Err(e) => eprintln!("{}", e),
@@ -139,33 +169,22 @@ fn main() {
                 if times.len() == 0 {
                     if 1440 % dir_count != 0 || dir_count == 0 {
                         eprintln!("{}", Errors::CountCompatError(dir_count));
-                    } else {
-                        let dir = canonicalize(dir).unwrap();
-                        let dir = dir.to_str().unwrap();
-                        if let Err(e) = wallpaper_listener(
-                            String::from(dir),
-                            dir_count,
-                            Arc::clone(&program),
-                            None,
-                            Arc::clone(&backend),
-                        ) {
-                            eprintln!("{}", e);
-                        }
-                    }
-                } else {
-                    let dir = canonicalize(dir).unwrap();
-                    let dir = dir.to_str().unwrap();
-                    if let Err(e) = wallpaper_listener(
-                        String::from(dir),
-                        dir_count,
-                        Arc::clone(&program),
-                        Some(times),
-                        Arc::clone(&backend),
-                    ) {
-                        eprintln!("{}", e);
                     }
                 }
+                else {
+                    times_arg = Some(times);
+                }
             }
+        }
+
+        if let Err(e) = wallpaper_listener(
+            String::from(dir),
+            dir_count,
+            Arc::clone(&program),
+            times_arg,
+            Arc::clone(&backend),
+        ) {
+            eprintln!("{}", e);
         }
     }
 

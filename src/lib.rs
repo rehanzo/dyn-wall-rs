@@ -40,6 +40,12 @@ use winapi::um::winuser::{
 pub mod errors;
 pub mod time_track;
 
+pub struct location {
+    lat: f64,
+    long: f64,
+    elevation: f64,
+}
+
 ///function that simply changes wallpaper based on the current time in relation to
 /// the vector of times passed as an argument
 ///
@@ -52,7 +58,7 @@ pub mod time_track;
 pub fn wallpaper_current_time(
     dir: &str,
     program: Arc<Option<String>>,
-    times: &[Time],
+    times: &[Time]
     backend: Arc<Option<String>>,
 ) -> Result<(), Box<dyn Error>> {
     let mut dir_iter = sorted_dir_iter(dir);
@@ -134,6 +140,7 @@ pub fn wallpaper_listener(
     program: Arc<Option<String>>,
     times_arg: Option<Vec<Time>>,
     backend: Arc<Option<String>>,
+    sun: bool,
 ) -> Result<(), Box<dyn Error>> {
     let (_, step_time, mut loop_time, mut times) = listener_setup(dir.as_str());
     let step_time = step_time?;
@@ -142,10 +149,16 @@ pub fn wallpaper_listener(
 
     match times_arg {
         None => {
-            for _ in 1..=dir_count {
-                times.push(loop_time);
-                loop_time += step_time;
+            match sun {
+                false => { 
+                    for _ in 1..=dir_count {
+                        times.push(loop_time);
+                        loop_time += step_time;
+                    }
+                }
+                true => times = sun_timings();
             }
+                    
         }
         Some(t) => times = t,
     }
