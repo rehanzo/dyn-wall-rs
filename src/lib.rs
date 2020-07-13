@@ -69,6 +69,7 @@ pub fn wallpaper_current_time(
     let mut next_time = times_iter.next().unwrap_or(&full_time);
     let mut filepath_set: String = String::new();
     let mut last_image = String::new();
+    let first_time = times[0].to_owned();
 
     let mut loop_time = error_checking(times, loop_time, dir_count)?;
 
@@ -96,9 +97,10 @@ pub fn wallpaper_current_time(
 
             //this is to send the file as an argument to the user specified program, if one was specified
             prog_handle_loader(&filepath_set, Arc::clone(&program), &mut prog_handle);
+            println!("loop Time = {:?}, next time = {:?}", loop_time, next_time);
         }
         loop_time = *next_time;
-        next_time = times_iter.next().unwrap_or(&full_time);
+        next_time = times_iter.next().unwrap_or(&first_time);
     }
 
     //this is for the edge case where the current time is after the last time specified for the day, but before the first one specified for the day
@@ -265,8 +267,6 @@ fn error_checking(
     let mut curr_range_other = start_range.to_owned();
     let mut other_inited = false;
     let mut checked = vec![];
-
-    println!("{}", dir_count);
 
     for time in times_iter_err {
         if *time > *start_range && *time > curr_range {
@@ -466,18 +466,30 @@ pub fn sun_timings(lat: f64, lon: f64, elevation: f64, dir_count_day: u32, dir_c
     let step_time_night = Time::new((1440 - (sunset.total_mins - sunrise.total_mins))/dir_count_night);
     let mut loop_time_night: Time; 
     let mut loop_time_day = sunrise.to_owned();
+    let full_time = Time::new(1440);
     //println!("{}", step_time_day.total_mins * dir_count_day + step_time_night.total_mins * dir_count_night);
 
     while loop_time_day < sunset {
-        times.push(loop_time_day);
+        if loop_time_day >= full_time {
+            times.push(loop_time_day - full_time);
+        }
+        else {
+            times.push(loop_time_day);
+        }
         loop_time_day += step_time_day;
     }
-    loop_time_night = loop_time_day.to_owned();
+    loop_time_night = loop_time_day.to_owned() + step_time_night;
 
     while loop_time_night < (sunrise + Time::new(1440)){
-        times.push(loop_time_night);
+        if loop_time_night >= full_time {
+            times.push(loop_time_night - full_time);
+        }
+        else {
+            times.push(loop_time_night);
+        }
         loop_time_night += step_time_night;
     }
-    //println!("{:?}", times);
+    println!("{:?}", times);
+    println!("Count = {}", times.len());
     times
 }

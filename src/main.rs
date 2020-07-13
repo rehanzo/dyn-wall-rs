@@ -152,15 +152,22 @@ fn main() {
                         let dir_day = format!("{}/day", dir);
                         let dir_day = dir_day.as_str();
 
-                        if check_dir_exists(dir).is_ok() && check_dir_exists(dir_night).is_ok() && check_dir_exists(dir_day).is_ok() {
-                            let dir_count_night = WalkDir::new(dir_night).min_depth(min_depth).into_iter().count();
-                            let dir_count_day = WalkDir::new(dir_day).min_depth(min_depth).into_iter().count();
-                            times = sun_timings(lat, args.long.unwrap(), args.elevation.unwrap(), dir_count_day as u32, dir_count_night as u32);
-                            min_depth = 2;
+                        if check_dir_exists(dir).is_err() {
+                            eprintln!("{}", Errors::FilePathError);
+                            process::exit(1);
                         }
-                        else {
+                        else if check_dir_exists(dir_night).is_err() || check_dir_exists(dir_day).is_err() {
                             eprintln!("Error: Make sure night and day directories are created within master directory");
                             process::exit(1);
+                        }
+
+                        else {
+                            let dir_count_night = WalkDir::new(dir_night).min_depth(min_depth).into_iter().count();
+                            let dir_count_day = WalkDir::new(dir_day).min_depth(min_depth).into_iter().count();
+                            println!("dir count night = {}", dir_count_night);
+                            println!("dir count day = {}", dir_count_day);
+                            times = sun_timings(lat, args.long.unwrap(), args.elevation.unwrap(), dir_count_day as u32, dir_count_night as u32);
+                            min_depth = 2;
                         }
                     }
                 }
@@ -348,7 +355,6 @@ fn create_config() -> Result<(), Box<dyn Error>> {
 
 fn check_dir_exists(dir: &str) -> Result<(), Errors> {
     let mut dir_iter = WalkDir::new(dir).into_iter();
-    dir_iter.next();
 
     if dir_iter.next().unwrap().is_err() {
         Err(Errors::DirNonExistantError(dir.to_string()))
