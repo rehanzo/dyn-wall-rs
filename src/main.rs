@@ -164,8 +164,6 @@ fn main() {
                         else {
                             let dir_count_night = WalkDir::new(dir_night).min_depth(min_depth).into_iter().count();
                             let dir_count_day = WalkDir::new(dir_day).min_depth(min_depth).into_iter().count();
-                            println!("dir count night = {}", dir_count_night);
-                            println!("dir count day = {}", dir_count_day);
                             times = sun_timings(lat, args.long.unwrap(), args.elevation.unwrap(), dir_count_day as u32, dir_count_night as u32);
                             min_depth = 2;
                         }

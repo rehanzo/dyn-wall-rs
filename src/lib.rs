@@ -97,7 +97,6 @@ pub fn wallpaper_current_time(
 
             //this is to send the file as an argument to the user specified program, if one was specified
             prog_handle_loader(&filepath_set, Arc::clone(&program), &mut prog_handle);
-            println!("loop Time = {:?}, next time = {:?}", loop_time, next_time);
         }
         loop_time = *next_time;
         next_time = times_iter.next().unwrap_or(&first_time);
@@ -489,7 +488,5 @@ pub fn sun_timings(lat: f64, lon: f64, elevation: f64, dir_count_day: u32, dir_c
         }
         loop_time_night += step_time_night;
     }
-    println!("{:?}", times);
-    println!("Count = {}", times.len());
     times
 }
