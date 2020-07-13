@@ -57,7 +57,7 @@ struct Args {
         help = r#"Sends image as argument to command specified. Use alongside listener or custom. If the command itself contains arguments, wrap in quotation ex. dyn-wall-rs -a /path/to/dir -l "betterlockscreen -u"
 If arguments after wallpaper argument are needed, use !WALL as a placeholder for wallpaper argument, and add rest of arguments ex. dyn-wall-rs -a /path/to/dir -p "betterlockscreen -u !WALL -b 1""#
     )]
-    program: Option<String>,
+    program: Option<Vec<String>>,
 
     #[structopt(
         short,
@@ -180,7 +180,7 @@ fn main() {
                 "Error: The program option is to be used with a specified directory"
             );
         } else {
-            program = Arc::new(Some(String::from(prog)));
+            program = Arc::new(Some(prog));
         }
     }
 

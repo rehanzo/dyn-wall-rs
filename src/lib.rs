@@ -51,7 +51,7 @@ pub mod time_track;
 /// * `times` - vector of time objects representing the times for each wallpaper in order
 pub fn wallpaper_current_time(
     dir: &str,
-    program: Arc<Option<String>>,
+    program: Arc<Option<Vec<String>>>,
     times: &[Time],
     backend: Arc<Option<String>>,
     min_depth: usize,
@@ -60,7 +60,7 @@ pub fn wallpaper_current_time(
     let mut dir_count = sorted_dir_iter(dir, min_depth);
 
     let dir_count: usize = dir_count.count();
-    let mut prog_handle: Command = Command::new("");
+    let mut prog_handle: Vec<Command> = vec![];
     let mut times_iter = times.iter();
     let curr_time = Time::new(Local::now().hour() * 60 + Local::now().minute());
     let loop_time = times_iter.next();
@@ -116,13 +116,16 @@ pub fn wallpaper_current_time(
     }
 
     if let Some(prog) = program.as_deref() {
-        prog_handle
-            .spawn()
-            .map_err(|_| Errors::ProgramRunError(String::from(prog)))?;
-        println!(
-            "The image {} has been sent as an argument to the specified program",
-            filepath_set
-        );
+        let mut prog_iter = prog.iter();
+        for curr_command in prog_handle.iter_mut() {
+            curr_command
+                .spawn()
+                .map_err(|_| Errors::ProgramRunError(String::from(prog_iter.next().unwrap())))?;
+            println!(
+                "The image {} has been sent as an argument to the specified program",
+                filepath_set
+            );
+        }
     }
     Ok(())
 }
@@ -130,7 +133,7 @@ pub fn wallpaper_current_time(
 pub fn wallpaper_listener(
     dir: String,
     dir_count: usize,
-    program: Arc<Option<String>>,
+    program: Arc<Option<Vec<String>>>,
     times_arg: Option<Vec<Time>>,
     backend: Arc<Option<String>>,
     min_depth: usize,
@@ -179,21 +182,24 @@ pub fn wallpaper_listener(
     }
 }
 
-fn prog_handle_loader(filepath_set: &str, program: Arc<Option<String>>, prog_handle: &mut Command) {
+fn prog_handle_loader(filepath_set: &str, program: Arc<Option<Vec<String>>>, prog_handle: &mut Vec<Command>) {
     let mut wall_sent = false;
-    if let Some(prog_str) = program.as_deref() {
-        let mut prog_split = prog_str.split_whitespace();
-        *prog_handle = Command::new(prog_split.next().unwrap());
-        for word in prog_split {
-            if word == "!WALL" {
-                prog_handle.arg(filepath_set);
-                wall_sent = true;
-            } else {
-                prog_handle.arg(word);
+    if let Some(prog_vec) = program.as_deref() {
+        for prog_str in prog_vec.iter() {
+            let mut prog_split = prog_str.split_whitespace();
+            let mut curr_command = Command::new(prog_split.next().unwrap());
+            for word in prog_split {
+                if word == "!WALL" {
+                    curr_command.arg(filepath_set);
+                    wall_sent = true;
+                } else {
+                    curr_command.arg(word);
+                }
             }
-        }
-        if wall_sent == false {
-            prog_handle.arg(filepath_set);
+            if wall_sent == false {
+                curr_command.arg(filepath_set);
+            }
+            prog_handle.push(curr_command);
         }
     }
 }
