@@ -54,12 +54,10 @@ pub fn wallpaper_current_time(
     program: Arc<Option<String>>,
     times: &[Time],
     backend: Arc<Option<String>>,
+    min_depth: usize,
 ) -> Result<(), Box<dyn Error>> {
-    let mut dir_iter = sorted_dir_iter(dir);
-    let mut dir_count = sorted_dir_iter(dir);
-
-    dir_iter.next();
-    dir_count.next();
+    let mut dir_iter = sorted_dir_iter(dir, min_depth);
+    let mut dir_count = sorted_dir_iter(dir, min_depth);
 
     let dir_count: usize = dir_count.count();
     let mut prog_handle: Command = Command::new("");
@@ -134,6 +132,7 @@ pub fn wallpaper_listener(
     program: Arc<Option<String>>,
     times_arg: Option<Vec<Time>>,
     backend: Arc<Option<String>>,
+    min_depth: usize,
 ) -> Result<(), Box<dyn Error>> {
     let (_, step_time, mut loop_time, mut times) = listener_setup(dir.as_str());
     let step_time = step_time?;
@@ -151,7 +150,7 @@ pub fn wallpaper_listener(
         Some(t) => times = t,
     }
 
-    wallpaper_current_time(&dir, Arc::clone(&program), &times, Arc::clone(&backend))?;
+    wallpaper_current_time(&dir, Arc::clone(&program), &times, Arc::clone(&backend), min_depth)?;
 
     for time in &times {
         let time_fmt = format!("{:02}:{:02}", time.hours, time.mins);
@@ -160,7 +159,7 @@ pub fn wallpaper_listener(
 
     let sched_closure = move || {
         let result =
-            wallpaper_current_time(&dir, Arc::clone(&program), &times, Arc::clone(&backend));
+            wallpaper_current_time(&dir, Arc::clone(&program), &times, Arc::clone(&backend), min_depth);
 
         match result {
             Ok(s) => s,
@@ -211,8 +210,8 @@ pub fn listener_setup(dir: &str) -> (usize, Result<Time, Errors>, Time, Vec<Time
     (dir_count, step_time, loop_time, times)
 }
 
-pub fn print_schedule(dir: &str, dir_count: usize) -> Result<(), Box<dyn Error>> {
-    let mut dir_iter = sorted_dir_iter(dir);
+pub fn print_schedule(dir: &str, dir_count: usize, min_depth: usize) -> Result<(), Box<dyn Error>> {
+    let mut dir_iter = sorted_dir_iter(dir, min_depth);
     let step_time = Time::new(((24.0 / dir_count as f32) * 60.0) as u32);
     let mut loop_time = Time::default();
     let mut i = 0;
@@ -223,7 +222,7 @@ pub fn print_schedule(dir: &str, dir_count: usize) -> Result<(), Box<dyn Error>>
 
     dir_iter.next();
 
-    let mut dir_iter = sorted_dir_iter(dir);
+    let mut dir_iter = sorted_dir_iter(dir, min_depth);
 
     while i < 24 * 60 {
         println!(
@@ -238,7 +237,7 @@ pub fn print_schedule(dir: &str, dir_count: usize) -> Result<(), Box<dyn Error>>
     Ok(())
 }
 
-pub fn sorted_dir_iter(dir: &str) -> IntoIter {
+pub fn sorted_dir_iter(dir: &str, min_depth: usize) -> IntoIter {
     WalkDir::new(dir)
         .sort_by(|a, b| {
             alphanumeric_sort::compare_str(
@@ -246,6 +245,7 @@ pub fn sorted_dir_iter(dir: &str) -> IntoIter {
                 b.path().to_str().expect("Sorting directory files failed"),
             )
         })
+        .min_depth(min_depth)
         .into_iter()
 }
 

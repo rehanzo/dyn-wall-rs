@@ -119,6 +119,7 @@ fn main() {
     let mut backend = Arc::new(None);
     let cli_args = !(Args::default() == args);
     let mut times: Vec<Time> = vec![];
+    let mut min_depth = 1;
 
     match config_parse(cli_args) {
         Err(e) => {
@@ -152,9 +153,10 @@ fn main() {
                         let dir_day = dir_day.as_str();
 
                         if check_dir_exists(dir).is_ok() && check_dir_exists(dir_night).is_ok() && check_dir_exists(dir_day).is_ok() {
-                            let dir_count_night = WalkDir::new(dir_night).into_iter().count() - 1;
-                            let dir_count_day = WalkDir::new(dir_day).into_iter().count() - 1;
+                            let dir_count_night = WalkDir::new(dir_night).min_depth(min_depth).into_iter().count();
+                            let dir_count_day = WalkDir::new(dir_day).min_depth(min_depth).into_iter().count();
                             times = sun_timings(lat, args.long.unwrap(), args.elevation.unwrap(), dir_count_day as u32, dir_count_night as u32);
+                            min_depth = 2;
                         }
                         else {
                             eprintln!("Error: Make sure night and day directories are created within master directory");
@@ -186,7 +188,7 @@ fn main() {
 
     if let Some(dir) = args.directory {
         let dir = dir.as_str();
-        let dir_count = WalkDir::new(dir).into_iter().count() - 1;
+        let dir_count = WalkDir::new(dir).min_depth(min_depth).into_iter().count();
         let dir = canonicalize(dir).unwrap();
         let dir = dir.to_str().unwrap();
         let mut times_arg: Option<Vec<Time>> = None;
@@ -211,6 +213,7 @@ fn main() {
             Arc::clone(&program),
             times_arg,
             Arc::clone(&backend),
+            min_depth,
         ) {
             eprintln!("{}", e);
         }
@@ -218,7 +221,7 @@ fn main() {
 
     if let Some(dir) = args.schedule {
         let dir = dir.as_str();
-        let dir_count = WalkDir::new(dir).into_iter().count() - 1;
+        let dir_count = WalkDir::new(dir).min_depth(min_depth).into_iter().count();
 
         if 1440 % dir_count != 0 || dir_count == 0 {
             eprintln!("{}", Errors::CountCompatError(dir_count));
@@ -228,7 +231,7 @@ fn main() {
                 Ok(_) => {
                     let dir = canonicalize(dir).unwrap();
                     let dir = dir.to_str().unwrap();
-                    if let Err(e) = print_schedule(dir, dir_count) {
+                    if let Err(e) = print_schedule(dir, dir_count, min_depth) {
                         eprintln!("{}", e);
                     }
                 }
@@ -344,7 +347,8 @@ fn create_config() -> Result<(), Box<dyn Error>> {
 }
 
 fn check_dir_exists(dir: &str) -> Result<(), Errors> {
-    let mut dir_iter = sorted_dir_iter(dir);
+    let mut dir_iter = WalkDir::new(dir).into_iter();
+    dir_iter.next();
 
     if dir_iter.next().unwrap().is_err() {
         Err(Errors::DirNonExistantError(dir.to_string()))
