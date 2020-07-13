@@ -78,26 +78,29 @@ If arguments after wallpaper argument are needed, use !WALL as a placeholder for
     #[structopt(
         long,
         value_name = "LAT",
-        help = "Uses the specified method as the backend to change the wallpaper"
+        help = "Uses the specified method as the backend to change the wallpaper",
         requires_all = &["long", "elevation"],
+        allow_hyphen_values(true)
     )]
-    lat: f64,
+    lat: Option<f64>,
 
     #[structopt(
         long,
         value_name = "LONG",
-        help = "Uses the specified method as the backend to change the wallpaper"
+        help = "Uses the specified method as the backend to change the wallpaper",
         requires_all = &["lat", "elevation"],
+        allow_hyphen_values(true)
     )]
-    long: f64,
+    long: Option<f64>,
 
     #[structopt(
         long,
         value_name = "ELEVATION",
-        help = "Uses the specified method as the backend to change the wallpaper"
+        help = "Uses the specified method as the backend to change the wallpaper",
         requires_all = &["lat", "long"],
+        allow_hyphen_values(true)
     )]
-    elevation: f64,
+    elevation: Option<f64>,
 }
 
 
@@ -125,19 +128,44 @@ fn main() {
         Ok(s) => {
             //rust doesn't let you assign when deconstructing, so this workaround is required
             let (temp_times, temp_args) = s;
-            if let Some(s) = temp_times {
-                times = s;
-            }
+
             if !cli_args {
                 args = temp_args;
                 if Args::default() == args {
                     eprintln!("Directory not specified");
                 }
             }
+
+            if let Some(s) = temp_times {
+                times = s;
+            }
+
+            if let Some(lat) = args.lat {
+                let dir = args.directory.to_owned();
+                match dir {
+                    None => eprintln!("Directory needs to be specified"),
+                    Some(dir) => {
+                        let dir = dir.as_str();
+                        let dir_night = format!("{}/night", dir);
+                        let dir_night = dir_night.as_str();
+                        let dir_day = format!("{}/day", dir);
+                        let dir_day = dir_day.as_str();
+
+                        if check_dir_exists(dir).is_ok() && check_dir_exists(dir_night).is_ok() && check_dir_exists(dir_day).is_ok() {
+                            let dir_count_night = WalkDir::new(dir_night).into_iter().count() - 1;
+                            let dir_count_day = WalkDir::new(dir_day).into_iter().count() - 1;
+                            times = sun_timings(lat, args.long.unwrap(), args.elevation.unwrap(), dir_count_day as u32, dir_count_night as u32);
+                        }
+                        else {
+                            eprintln!("Error: Make sure night and day directories are created within master directory");
+                            process::exit(1);
+                        }
+                    }
+                }
+            }
         }
     }
 
-    
 
     if let Some(prog) = args.program {
         if args.directory.is_none() {

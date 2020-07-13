@@ -40,12 +40,6 @@ use winapi::um::winuser::{
 pub mod errors;
 pub mod time_track;
 
-pub struct location {
-    lat: f64,
-    long: f64,
-    elevation: f64,
-}
-
 ///function that simply changes wallpaper based on the current time in relation to
 /// the vector of times passed as an argument
 ///
@@ -58,7 +52,7 @@ pub struct location {
 pub fn wallpaper_current_time(
     dir: &str,
     program: Arc<Option<String>>,
-    times: &[Time]
+    times: &[Time],
     backend: Arc<Option<String>>,
 ) -> Result<(), Box<dyn Error>> {
     let mut dir_iter = sorted_dir_iter(dir);
@@ -140,7 +134,6 @@ pub fn wallpaper_listener(
     program: Arc<Option<String>>,
     times_arg: Option<Vec<Time>>,
     backend: Arc<Option<String>>,
-    sun: bool,
 ) -> Result<(), Box<dyn Error>> {
     let (_, step_time, mut loop_time, mut times) = listener_setup(dir.as_str());
     let step_time = step_time?;
@@ -149,14 +142,9 @@ pub fn wallpaper_listener(
 
     match times_arg {
         None => {
-            match sun {
-                false => { 
-                    for _ in 1..=dir_count {
-                        times.push(loop_time);
-                        loop_time += step_time;
-                    }
-                }
-                true => times = sun_timings();
+            for _ in 1..=dir_count {
+                times.push(loop_time);
+                loop_time += step_time;
             }
                     
         }
@@ -277,6 +265,9 @@ fn error_checking(
     let mut curr_range_other = start_range.to_owned();
     let mut other_inited = false;
     let mut checked = vec![];
+
+    println!("{}", dir_count);
+
     for time in times_iter_err {
         if *time > *start_range && *time > curr_range {
             curr_range = *time;
@@ -475,7 +466,7 @@ pub fn sun_timings(lat: f64, lon: f64, elevation: f64, dir_count_day: u32, dir_c
     let step_time_night = Time::new((1440 - (sunset.total_mins - sunrise.total_mins))/dir_count_night);
     let mut loop_time_night: Time; 
     let mut loop_time_day = sunrise.to_owned();
-    println!("{}", step_time_day.total_mins * dir_count_day + step_time_night.total_mins * dir_count_night);
+    //println!("{}", step_time_day.total_mins * dir_count_day + step_time_night.total_mins * dir_count_night);
 
     while loop_time_day < sunset {
         times.push(loop_time_day);
@@ -487,6 +478,6 @@ pub fn sun_timings(lat: f64, lon: f64, elevation: f64, dir_count_day: u32, dir_c
         times.push(loop_time_night);
         loop_time_night += step_time_night;
     }
-    println!("{:?}", times);
+    //println!("{:?}", times);
     times
 }
