@@ -112,8 +112,7 @@ In order to sync the changing of wallpapers according to the sunset and sunrise 
   * Window Managers that can have their wallpaper set using Feh
 
 ## Planned Feature(s)
-  * Ability to send multiple commands with the lockscreen argument, so you can do something like have dyn-wall-rs send the image path to pywall as well as betterlockscreen
-  * Wallpaper changes synced to the suns location, rather than just with the time
+
 
 [RELEASES]: https://github.com/RAR27/dyn-wall-rs/releases
 [DEMO]: https://raw.githubusercontent.com/RAR27/dyn-wall-rs/master/demo.gif 
