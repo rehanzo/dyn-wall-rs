@@ -20,7 +20,7 @@
 use crate::errors::{ConfigFileErrors, Errors};
 use clap::AppSettings;
 use dirs::config_dir;
-use dyn_wall_rs::{print_schedule, sorted_dir_iter, time_track::Time, wallpaper_listener, sun_timings};
+use dyn_wall_rs::{print_schedule, sun_timings, time_track::Time, wallpaper_listener};
 use serde::{Deserialize, Serialize};
 use std::fs::canonicalize;
 use std::process;
@@ -103,8 +103,6 @@ If arguments after wallpaper argument are needed, use !WALL as a placeholder for
     elevation: Option<f64>,
 }
 
-
-
 #[derive(Deserialize, Serialize)]
 struct Times {
     times: Option<Vec<String>>,
@@ -155,16 +153,27 @@ fn main() {
                         if check_dir_exists(dir).is_err() {
                             eprintln!("{}", Errors::FilePathError);
                             process::exit(1);
-                        }
-                        else if check_dir_exists(dir_night).is_err() || check_dir_exists(dir_day).is_err() {
+                        } else if check_dir_exists(dir_night).is_err()
+                            || check_dir_exists(dir_day).is_err()
+                        {
                             eprintln!("Error: Make sure night and day directories are created within master directory");
                             process::exit(1);
-                        }
-
-                        else {
-                            let dir_count_night = WalkDir::new(dir_night).min_depth(min_depth).into_iter().count();
-                            let dir_count_day = WalkDir::new(dir_day).min_depth(min_depth).into_iter().count();
-                            times = sun_timings(lat, args.long.unwrap(), args.elevation.unwrap(), dir_count_day as u32, dir_count_night as u32);
+                        } else {
+                            let dir_count_night = WalkDir::new(dir_night)
+                                .min_depth(min_depth)
+                                .into_iter()
+                                .count();
+                            let dir_count_day = WalkDir::new(dir_day)
+                                .min_depth(min_depth)
+                                .into_iter()
+                                .count();
+                            times = sun_timings(
+                                lat,
+                                args.long.unwrap(),
+                                args.elevation.unwrap(),
+                                dir_count_day as u32,
+                                dir_count_night as u32,
+                            );
                             min_depth = 2;
                         }
                     }
@@ -173,12 +182,9 @@ fn main() {
         }
     }
 
-
     if let Some(prog) = args.program {
         if args.directory.is_none() {
-            eprintln!(
-                "Error: The program option is to be used with a specified directory"
-            );
+            eprintln!("Error: The program option is to be used with a specified directory");
         } else {
             program = Arc::new(Some(prog));
         }
@@ -205,8 +211,7 @@ fn main() {
                     if 1440 % dir_count != 0 || dir_count == 0 {
                         eprintln!("{}", Errors::CountCompatError(dir_count));
                     }
-                }
-                else {
+                } else {
                     times_arg = Some(times);
                 }
             }
@@ -265,7 +270,7 @@ fn config_parse(cli_args: bool) -> Result<(Option<Vec<Time>>, Args), Box<dyn Err
 
     if file.is_err() && cli_args {
         println!("A config file has been created");
-        return Ok((None, Args::default()))
+        return Ok((None, Args::default()));
     }
     let mut file = file.unwrap();
 
@@ -344,8 +349,11 @@ fn create_config() -> Result<(), Box<dyn Error>> {
 # Config options are stated below; uncomment them and fill them as you would from the command line.
 #times = []
 #directory = "/path/to/dir"
-#backend = "backend"
-#program = "command""#;
+#backend = "feh"
+#program = ["echo test1", "echo test2"]
+#lat = 99
+#long = -99
+#elevation = 99"#;
 
     config_file.write_all(default_test.as_bytes())?;
     Ok(())

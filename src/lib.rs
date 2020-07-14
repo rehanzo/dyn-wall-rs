@@ -25,8 +25,8 @@ use walkdir::{IntoIter, WalkDir};
 
 use crate::errors::{ConfigFileErrors, Errors};
 use run_script::ScriptOptions;
-use unicase::UniCase;
 use sun_times;
+use unicase::UniCase;
 
 #[cfg(windows)]
 use std::ffi::OsStr;
@@ -56,8 +56,8 @@ pub fn wallpaper_current_time(
     backend: Arc<Option<String>>,
     min_depth: usize,
 ) -> Result<(), Box<dyn Error>> {
-    let mut dir_iter = sorted_dir_iter(dir, min_depth);
-    let mut dir_count = sorted_dir_iter(dir, min_depth);
+    let dir_iter = sorted_dir_iter(dir, min_depth);
+    let dir_count = sorted_dir_iter(dir, min_depth);
 
     let dir_count: usize = dir_count.count();
     let mut prog_handle: Vec<Command> = vec![];
@@ -149,12 +149,17 @@ pub fn wallpaper_listener(
                 times.push(loop_time);
                 loop_time += step_time;
             }
-                    
         }
         Some(t) => times = t,
     }
 
-    wallpaper_current_time(&dir, Arc::clone(&program), &times, Arc::clone(&backend), min_depth)?;
+    wallpaper_current_time(
+        &dir,
+        Arc::clone(&program),
+        &times,
+        Arc::clone(&backend),
+        min_depth,
+    )?;
 
     for time in &times {
         let time_fmt = format!("{:02}:{:02}", time.hours, time.mins);
@@ -162,8 +167,13 @@ pub fn wallpaper_listener(
     }
 
     let sched_closure = move || {
-        let result =
-            wallpaper_current_time(&dir, Arc::clone(&program), &times, Arc::clone(&backend), min_depth);
+        let result = wallpaper_current_time(
+            &dir,
+            Arc::clone(&program),
+            &times,
+            Arc::clone(&backend),
+            min_depth,
+        );
 
         match result {
             Ok(s) => s,
@@ -182,7 +192,11 @@ pub fn wallpaper_listener(
     }
 }
 
-fn prog_handle_loader(filepath_set: &str, program: Arc<Option<Vec<String>>>, prog_handle: &mut Vec<Command>) {
+fn prog_handle_loader(
+    filepath_set: &str,
+    program: Arc<Option<Vec<String>>>,
+    prog_handle: &mut Vec<Command>,
+) {
     let mut wall_sent = false;
     if let Some(prog_vec) = program.as_deref() {
         for prog_str in prog_vec.iter() {
@@ -461,15 +475,22 @@ qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "
     Ok(())
 }
 
-pub fn sun_timings(lat: f64, lon: f64, elevation: f64, dir_count_day: u32, dir_count_night: u32) -> Vec<Time> {
+pub fn sun_timings(
+    lat: f64,
+    lon: f64,
+    elevation: f64,
+    dir_count_day: u32,
+    dir_count_night: u32,
+) -> Vec<Time> {
     let mut times: Vec<Time> = vec![];
     let (sunrise, sunset) = sun_times::sun_times(Utc::today(), lat, lon, elevation);
     let (sunset, sunrise) = (sunset.with_timezone(&Local), sunrise.with_timezone(&Local));
     let sunset = Time::new((sunset.hour() * 60) + sunset.minute());
     let sunrise = Time::new((sunrise.hour() * 60) + sunrise.minute());
-    let step_time_day = Time::new((sunset.total_mins - sunrise.total_mins)/dir_count_day);
-    let step_time_night = Time::new((1440 - (sunset.total_mins - sunrise.total_mins))/dir_count_night);
-    let mut loop_time_night: Time; 
+    let step_time_day = Time::new((sunset.total_mins - sunrise.total_mins) / dir_count_day);
+    let step_time_night =
+        Time::new((1440 - (sunset.total_mins - sunrise.total_mins)) / dir_count_night);
+    let mut loop_time_night: Time;
     let mut loop_time_day = sunrise.to_owned();
     let full_time = Time::new(1440);
     //println!("{}", step_time_day.total_mins * dir_count_day + step_time_night.total_mins * dir_count_night);
@@ -477,19 +498,17 @@ pub fn sun_timings(lat: f64, lon: f64, elevation: f64, dir_count_day: u32, dir_c
     while loop_time_day < sunset {
         if loop_time_day >= full_time {
             times.push(loop_time_day - full_time);
-        }
-        else {
+        } else {
             times.push(loop_time_day);
         }
         loop_time_day += step_time_day;
     }
     loop_time_night = loop_time_day.to_owned() + step_time_night;
 
-    while loop_time_night < (sunrise + Time::new(1440)){
+    while loop_time_night < (sunrise + Time::new(1440)) {
         if loop_time_night >= full_time {
             times.push(loop_time_night - full_time);
-        }
-        else {
+        } else {
             times.push(loop_time_night);
         }
         loop_time_night += step_time_night;
