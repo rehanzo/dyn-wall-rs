@@ -73,6 +73,9 @@ There are a few different ways to use dyn-wall-rs from the command line using th
     
     To be able to send arguments *after* the wallpaper argument, use `!WALL` to specify where the wallpaper argument is to be placed, and add the rest of the arguments. `!WALL` will be explanded to the path of the wallpaper to be set at the current time.\
     ex. `dyn-wall-rs -d /path/to/dir -p "betterlockscreen -u !WALL -b 1"`
+    
+    You are also able to specifiy multiple programs to be synced with the wallpaper. Simply just insert the program names one after the other
+    ex. `dyn-wall-rs -d /path/to/dir -p "betterlockscreen -u" "echo"
 
   * **-s, --schedule \<DIRECTORY>**\
     Prints out a schedule of the times at which the wallpaper would change if the auto option were to be used.
