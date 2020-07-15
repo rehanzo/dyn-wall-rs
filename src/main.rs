@@ -50,17 +50,16 @@ struct Args {
 
     #[structopt(
         short = "p",
-        long = "program",
+        long = "programs",
         value_name = "COMMAND",
-        help = r#"Sends image as argument to command specified. Use alongside listener or custom. If the command itself contains arguments, wrap in quotation ex. dyn-wall-rs -a /path/to/dir -l "betterlockscreen -u"
-If arguments after wallpaper argument are needed, use !WALL as a placeholder for wallpaper argument, and add rest of arguments ex. dyn-wall-rs -a /path/to/dir -p "betterlockscreen -u !WALL -b 1""#
+        help = r#"Sends image as argument to command specified. Use alongside listener or custom. If the command itself contains arguments, wrap in quotation ex. dyn-wall-rs -a /path/to/dir -l "betterlockscreen -u""#
     )]
     program: Option<Vec<String>>,
 
     #[structopt(
         short,
         long,
-        value_name = "COMMAND",
+        value_name = "DIRECTORY",
         help = "Will present you with a schedule of when your wallpaper will change if you have not set custom times in the config file"
     )]
     schedule: Option<String>,
