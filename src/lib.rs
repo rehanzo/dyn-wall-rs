@@ -1,5 +1,5 @@
 /*
-   dyn-wall-rs 1.1.2
+   dyn-wall-rs 2.0.0
    Rehan Rana <rehanalirana@tuta.io>
    Helps user set a dynamic wallpaper and lockscreen. For more info and help, go to https://github.com/RAR27/dyn-wall-rs
    Copyright (C) 2020  Rehan Rana
@@ -17,16 +17,17 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-use crate::time_track::Time;
-use chrono::{Local, Timelike};
+use crate::{ time_track::Time, errors::{ConfigFileErrors, Errors} };
+use chrono::{Local, Timelike, Utc};
 use clokwerk::{Scheduler, TimeUnits};
 use std::{env, error::Error, process, process::Command, sync::Arc, thread::sleep, time::Duration};
 use walkdir::{IntoIter, WalkDir};
 
-use crate::errors::{ConfigFileErrors, Errors};
 use run_script::ScriptOptions;
+use sun_times;
 use unicase::UniCase;
 
+//crates used to change windows wallpaper
 #[cfg(windows)]
 use std::ffi::OsStr;
 #[cfg(windows)]
@@ -39,37 +40,36 @@ use winapi::um::winuser::{
 pub mod errors;
 pub mod time_track;
 
-///function that simply changes wallpaper based on the current time in relation to
-/// the vector of times passed as an argument
-///
-/// # Arguments
-///
-/// * `dir` - path to target directory
-/// * `dir_count` - number of files within the directory
-/// * `program` - Option containing a string for the user defined program. None if user doesn't pass program
-/// * `times` - vector of time objects representing the times for each wallpaper in order
+const FULL_DAY: Time = Time {
+    hours: 24,
+    mins: 0,
+    total_mins: 0,
+};
+const MIDNIGHT: Time = Time {
+    hours: 0,
+    mins: 0,
+    total_mins: 0,
+};
+
 pub fn wallpaper_current_time(
     dir: &str,
-    program: Arc<Option<String>>,
+    progs: Arc<Option<Vec<String>>>,
     times: &[Time],
     backend: Arc<Option<String>>,
+    min_depth: usize,
 ) -> Result<(), Box<dyn Error>> {
-    let mut dir_iter = sorted_dir_iter(dir);
-    let mut dir_count = sorted_dir_iter(dir);
-
-    dir_iter.next();
-    dir_count.next();
+    let dir_iter = sorted_dir_iter(dir, min_depth);
+    let dir_count = sorted_dir_iter(dir, min_depth);
 
     let dir_count: usize = dir_count.count();
-    let mut prog_handle: Command = Command::new("");
+    let mut commands_vec: Vec<Command> = vec![];
     let mut times_iter = times.iter();
     let curr_time = Time::new(Local::now().hour() * 60 + Local::now().minute());
     let loop_time = times_iter.next();
-    let full_time = Time::new(24 * 60);
-    let midnight = Time::default();
-    let mut next_time = times_iter.next().unwrap_or(&full_time);
+    let mut next_time = times_iter.next().unwrap_or(&FULL_DAY);
     let mut filepath_set: String = String::new();
     let mut last_image = String::new();
+    let first_time = times[0].to_owned();
 
     let mut loop_time = error_checking(times, loop_time, dir_count)?;
 
@@ -77,9 +77,9 @@ pub fn wallpaper_current_time(
     for file in dir_iter {
         //needed for the case where midnight is passed over in the middle of the stated times
         if loop_time > *next_time {
-            loop_time = midnight;
+            loop_time = MIDNIGHT;
         }
-        if loop_time == full_time && *next_time == full_time {
+        if loop_time == FULL_DAY && *next_time == FULL_DAY {
             return Err(Errors::ConfigFileError(ConfigFileErrors::FileTimeMismatch).into());
         }
 
@@ -96,10 +96,10 @@ pub fn wallpaper_current_time(
             }?);
 
             //this is to send the file as an argument to the user specified program, if one was specified
-            prog_handle_loader(&filepath_set, Arc::clone(&program), &mut prog_handle);
+            commands_vec_loader(&filepath_set, Arc::clone(&progs), &mut commands_vec);
         }
         loop_time = *next_time;
-        next_time = times_iter.next().unwrap_or(&full_time);
+        next_time = times_iter.next().unwrap_or(&first_time);
     }
 
     //this is for the edge case where the current time is after the last time specified for the day, but before the first one specified for the day
@@ -109,20 +109,23 @@ pub fn wallpaper_current_time(
     if filepath_set.is_empty() {
         de_command_spawn(&last_image, backend)?;
 
-        prog_handle_loader(&last_image, Arc::clone(&program), &mut prog_handle);
+        commands_vec_loader(&last_image, Arc::clone(&progs), &mut commands_vec);
         filepath_set = last_image;
     } else {
         de_command_spawn(&filepath_set, backend)?;
     }
 
-    if let Some(prog) = program.as_deref() {
-        prog_handle
-            .spawn()
-            .map_err(|_| Errors::ProgramRunError(String::from(prog)))?;
-        println!(
-            "The image {} has been sent as an argument to the specified program",
-            filepath_set
-        );
+    if let Some(progs) = progs.as_deref() {
+        let mut prog_iter = progs.iter();
+        for curr_command in commands_vec.iter_mut() {
+            curr_command
+                .spawn()
+                .map_err(|_| Errors::ProgramRunError(String::from(prog_iter.next().unwrap())))?;
+            println!(
+                "The image {} has been sent as an argument to the specified program",
+                filepath_set
+            );
+        }
     }
     Ok(())
 }
@@ -130,9 +133,10 @@ pub fn wallpaper_current_time(
 pub fn wallpaper_listener(
     dir: String,
     dir_count: usize,
-    program: Arc<Option<String>>,
+    progs: Arc<Option<Vec<String>>>,
     times_arg: Option<Vec<Time>>,
     backend: Arc<Option<String>>,
+    min_depth: usize,
 ) -> Result<(), Box<dyn Error>> {
     let (_, step_time, mut loop_time, mut times) = listener_setup(dir.as_str());
     let step_time = step_time?;
@@ -149,7 +153,13 @@ pub fn wallpaper_listener(
         Some(t) => times = t,
     }
 
-    wallpaper_current_time(&dir, Arc::clone(&program), &times, Arc::clone(&backend))?;
+    wallpaper_current_time(
+        &dir,
+        Arc::clone(&progs),
+        &times,
+        Arc::clone(&backend),
+        min_depth,
+    )?;
 
     for time in &times {
         let time_fmt = format!("{:02}:{:02}", time.hours, time.mins);
@@ -157,8 +167,13 @@ pub fn wallpaper_listener(
     }
 
     let sched_closure = move || {
-        let result =
-            wallpaper_current_time(&dir, Arc::clone(&program), &times, Arc::clone(&backend));
+        let result = wallpaper_current_time(
+            &dir,
+            Arc::clone(&progs),
+            &times,
+            Arc::clone(&backend),
+            min_depth,
+        );
 
         match result {
             Ok(s) => s,
@@ -177,21 +192,31 @@ pub fn wallpaper_listener(
     }
 }
 
-fn prog_handle_loader(filepath_set: &str, program: Arc<Option<String>>, prog_handle: &mut Command) {
+fn commands_vec_loader(
+    filepath_set: &str,
+    progs: Arc<Option<Vec<String>>>,
+    commands_vec: &mut Vec<Command>,
+) {
     let mut wall_sent = false;
-    if let Some(prog_str) = program.as_deref() {
-        let mut prog_split = prog_str.split_whitespace();
-        *prog_handle = Command::new(prog_split.next().unwrap());
-        for word in prog_split {
-            if word == "!WALL" {
-                prog_handle.arg(filepath_set);
-                wall_sent = true;
-            } else {
-                prog_handle.arg(word);
+    if let Some(prog_vec) = progs.as_deref() {
+        for prog_str in prog_vec.iter() {
+            let mut prog_split = prog_str.split_whitespace();
+            let mut curr_command = Command::new(prog_split.next().unwrap());
+            for word in prog_split {
+                //replacing !WALL with the filepath
+                if word == "!WALL" {
+                    curr_command.arg(filepath_set);
+                    wall_sent = true;
+                } else {
+                    curr_command.arg(word);
+                }
             }
-        }
-        if wall_sent == false {
-            prog_handle.arg(filepath_set);
+            //if the filepath has been placed previously, this ensures that we dont place it again at the end
+            if wall_sent == false {
+                curr_command.arg(filepath_set);
+                wall_sent = true;
+            }
+            commands_vec.push(curr_command);
         }
     }
 }
@@ -209,8 +234,8 @@ pub fn listener_setup(dir: &str) -> (usize, Result<Time, Errors>, Time, Vec<Time
     (dir_count, step_time, loop_time, times)
 }
 
-pub fn print_schedule(dir: &str, dir_count: usize) -> Result<(), Box<dyn Error>> {
-    let mut dir_iter = sorted_dir_iter(dir);
+pub fn print_schedule(dir: &str, dir_count: usize, min_depth: usize) -> Result<(), Box<dyn Error>> {
+    let mut dir_iter = sorted_dir_iter(dir, min_depth);
     let step_time = Time::new(((24.0 / dir_count as f32) * 60.0) as u32);
     let mut loop_time = Time::default();
     let mut i = 0;
@@ -221,7 +246,7 @@ pub fn print_schedule(dir: &str, dir_count: usize) -> Result<(), Box<dyn Error>>
 
     dir_iter.next();
 
-    let mut dir_iter = sorted_dir_iter(dir);
+    let mut dir_iter = sorted_dir_iter(dir, min_depth);
 
     while i < 24 * 60 {
         println!(
@@ -236,7 +261,7 @@ pub fn print_schedule(dir: &str, dir_count: usize) -> Result<(), Box<dyn Error>>
     Ok(())
 }
 
-pub fn sorted_dir_iter(dir: &str) -> IntoIter {
+pub fn sorted_dir_iter(dir: &str, min_depth: usize) -> IntoIter {
     WalkDir::new(dir)
         .sort_by(|a, b| {
             alphanumeric_sort::compare_str(
@@ -244,6 +269,7 @@ pub fn sorted_dir_iter(dir: &str) -> IntoIter {
                 b.path().to_str().expect("Sorting directory files failed"),
             )
         })
+        .min_depth(min_depth)
         .into_iter()
 }
 
@@ -253,7 +279,6 @@ fn error_checking(
     dir_count: usize,
 ) -> Result<Time, Box<dyn Error>> {
     let times_iter_err = times.iter();
-    let full_time = Time::new(24 * 60);
     let start_range = times
         .iter()
         .next()
@@ -263,6 +288,10 @@ fn error_checking(
     let mut curr_range_other = start_range.to_owned();
     let mut other_inited = false;
     let mut checked = vec![];
+
+    //loop through and error check. When time passes midnight, another loop is required in order to
+    //start error checking those timings properly, to avoid the false error of the previous time
+    //being greater than the next time
     for time in times_iter_err {
         if *time > *start_range && *time > curr_range {
             curr_range = *time;
@@ -270,7 +299,7 @@ fn error_checking(
             return Err(Errors::ConfigFileError(ConfigFileErrors::OutOfOrder).into());
         } else if *time < *start_range {
             if !other_inited {
-                curr_range = full_time;
+                curr_range = FULL_DAY;
                 start_range_other = time;
                 curr_range_other = *time;
                 other_inited = true
@@ -305,7 +334,7 @@ fn de_command_spawn(
     backend: Arc<Option<String>>,
 ) -> Result<(), Box<dyn Error>> {
     if backend.is_some() {
-        eprintln!("NOTE: You are unable to select a backend on windows")
+        eprintln!("NOTE: You are unable to select a backend on windows");
     }
     unsafe {
         let file = OsStr::new(filepath_set)
@@ -449,4 +478,44 @@ qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "
     }
     println!("{} has been set as your wallpaper", filepath_set);
     Ok(())
+}
+
+pub fn sun_timings(
+    lat: f64,
+    lon: f64,
+    elevation: f64,
+    dir_count_day: u32,
+    dir_count_night: u32,
+) -> Vec<Time> {
+    let mut times: Vec<Time> = vec![];
+    let (sunrise, sunset) = sun_times::sun_times(Utc::today(), lat, lon, elevation);
+    let (sunset, sunrise) = (sunset.with_timezone(&Local), sunrise.with_timezone(&Local));
+    let sunset = Time::new((sunset.hour() * 60) + sunset.minute());
+    let sunrise = Time::new((sunrise.hour() * 60) + sunrise.minute());
+    let step_time_day = Time::new((sunset.total_mins - sunrise.total_mins) / dir_count_day);
+    let step_time_night =
+        Time::new((1440 - (sunset.total_mins - sunrise.total_mins)) / dir_count_night);
+    let mut loop_time_night: Time;
+    let mut loop_time_day = sunrise.to_owned();
+    //println!("{}", step_time_day.total_mins * dir_count_day + step_time_night.total_mins * dir_count_night);
+
+    while loop_time_day < sunset {
+        if loop_time_day >= FULL_DAY {
+            times.push(loop_time_day - FULL_DAY);
+        } else {
+            times.push(loop_time_day);
+        }
+        loop_time_day += step_time_day;
+    }
+    loop_time_night = loop_time_day.to_owned() + step_time_night;
+
+    while loop_time_night < (sunrise + Time::new(1440)) {
+        if loop_time_night >= FULL_DAY {
+            times.push(loop_time_night - FULL_DAY);
+        } else {
+            times.push(loop_time_night);
+        }
+        loop_time_night += step_time_night;
+    }
+    times
 }

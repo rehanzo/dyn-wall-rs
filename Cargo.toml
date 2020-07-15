@@ -1,6 +1,6 @@
 [package]
 name = "dyn-wall-rs"
-version = "1.1.2"
+version = "2.0.0"
 authors = ["RAR27"]
 edition = "2018"
 license = "GPL-3.0-or-later"
@@ -28,3 +28,4 @@ structopt = "0.3.15"
 clap = "2.33.1"
 serde = { version = "1.0.114", features = ["derive"] }
 toml = "0.5"
+sun-times = "0.1.2"

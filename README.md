@@ -79,6 +79,15 @@ There are a few different ways to use dyn-wall-rs from the command line using th
     
   * **-b, --backend \<BACKEND>**\
     Uses the specified method as the backend to change the wallpaper. Type a supported DE name to use that DE's wallpaper changing command, or type `feh` to use feh. Case insensitive.
+    
+  * **--lat \<LATITUDE>**\
+    Latitude of current location. Requires the use of the `long` and `elevation` options as well
+    
+  * **--long \<LONGITUDE>**\
+    Longitude of current location. Requires the use of the `lat` and `elevation` options as well
+    
+  * **--elevation \<ELEVATION>**\
+    Elevation of current location. Requires the use of the `lat` and `long` options as well
 
 Once you figure out which options you want to use and test it to make sure its working how you want it to, have the command autostart on boot.
 
@@ -86,6 +95,9 @@ Once you figure out which options you want to use and test it to make sure its w
 dyn-wall-rs can also be configured through a config file. When you run the program for the first time, a config file will be created at `~/.config/dyn-wall-rs/config.toml` for Unix systems, and `C:\Users\<USER NAME>\AppData\Roaming\dyn-wall-rs.toml` on Windows. 
 
 Through this config file, you can use the same configuration options as through the command line, as well as use your own custom timings. If you would like to use custom timings, but configure everything else through the command line, you are able to do so. More details can be found in the automatically created config file.
+
+### Syncing to the sun
+In order to sync the changing of wallpapers according to the sunset and sunrise timings, create directories within the master directory named "night" and "day". This will cycle through the wallpapers in the "day" directory if the current time is before the sunset time, and will cycle through the wallpapers in the "night" directory. After the directories are created and the wallpapers are placed in them, specify your latitude, longitude, and elevation, and let the program do its work! You can find your coordinates through [this] (https://www.mapcoordinates.net/en) website.
 
 ## Supported Desktop Environments
   * Windows
@@ -100,8 +112,7 @@ Through this config file, you can use the same configuration options as through 
   * Window Managers that can have their wallpaper set using Feh
 
 ## Planned Feature(s)
-  * Ability to send multiple commands with the lockscreen argument, so you can do something like have dyn-wall-rs send the image path to pywall as well as betterlockscreen
-  * Wallpaper changes synced to the suns location, rather than just with the time
+
 
 [RELEASES]: https://github.com/RAR27/dyn-wall-rs/releases
 [DEMO]: https://raw.githubusercontent.com/RAR27/dyn-wall-rs/master/demo.gif 

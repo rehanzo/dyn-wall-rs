@@ -1,5 +1,5 @@
 /*
-   dyn-wall-rs 1.1.2
+   dyn-wall-rs 2.0.0
    Rehan Rana <rehanalirana@tuta.io>
    Helps user set a dynamic wallpaper and lockscreen. For more info and help, go to https://github.com/RAR27/dyn-wall-rs
    Copyright (C) 2020  Rehan Rana
@@ -20,12 +20,10 @@
 use crate::errors::{ConfigFileErrors, Errors};
 use clap::AppSettings;
 use dirs::config_dir;
-use dyn_wall_rs::{print_schedule, sorted_dir_iter, time_track::Time, wallpaper_listener};
+use dyn_wall_rs::{print_schedule, sun_timings, time_track::Time, wallpaper_listener};
 use serde::{Deserialize, Serialize};
-use std::fs::canonicalize;
-use std::process;
 use std::{
-    error::Error, fs::create_dir_all, fs::File, io::Read, io::Write, str::FromStr, sync::Arc,
+    error::Error, fs::create_dir_all, fs::File, io::Read, io::Write, str::FromStr, sync::Arc, process, fs::canonicalize,
 };
 use structopt::StructOpt;
 use toml;
@@ -57,7 +55,7 @@ struct Args {
         help = r#"Sends image as argument to command specified. Use alongside listener or custom. If the command itself contains arguments, wrap in quotation ex. dyn-wall-rs -a /path/to/dir -l "betterlockscreen -u"
 If arguments after wallpaper argument are needed, use !WALL as a placeholder for wallpaper argument, and add rest of arguments ex. dyn-wall-rs -a /path/to/dir -p "betterlockscreen -u !WALL -b 1""#
     )]
-    program: Option<String>,
+    program: Option<Vec<String>>,
 
     #[structopt(
         short,
@@ -74,7 +72,37 @@ If arguments after wallpaper argument are needed, use !WALL as a placeholder for
         help = "Uses the specified method as the backend to change the wallpaper"
     )]
     backend: Option<String>,
+
+    #[structopt(
+        long,
+        value_name = "LATITUDE",
+        help = "Latitude of current location. Requires the use of the long and elevation options as well",
+        requires_all = &["long", "elevation"],
+        allow_hyphen_values(true)
+    )]
+    lat: Option<f64>,
+
+    #[structopt(
+        long,
+        value_name = "LONGITUDE",
+        help = "Longitude of current location. Requires the use of the lat and elevation options as well",
+        requires_all = &["lat", "elevation"],
+        allow_hyphen_values(true)
+    )]
+    long: Option<f64>,
+
+    #[structopt(
+        long,
+        value_name = "ELEVATION",
+        help = "Elevation of current location. Requires the use of the lat and long options as well",
+        requires_all = &["lat", "long"],
+        allow_hyphen_values(true)
+    )]
+    elevation: Option<f64>,
 }
+
+//not optimal, but it seems serde can really only work on structs. Would be great if I could
+//serialize straight into a vector, but it doesn't seem like I can, so this is a workaround
 #[derive(Deserialize, Serialize)]
 struct Times {
     times: Option<Vec<String>>,
@@ -89,7 +117,12 @@ fn main() {
     let mut backend = Arc::new(None);
     let cli_args = !(Args::default() == args);
     let mut times: Vec<Time> = vec![];
+    //min depth of what files should be looked at, will remain as 1 if not syncing with sun, will
+    //change to 2 if syncing with sun to ignore the directory names, focusing just on the files
+    let mut min_depth = 1;
 
+    //pulling from config file if cli arguments are not specified, or if just custom timings were
+    //specified
     match config_parse(cli_args) {
         Err(e) => {
             eprint!("{}", e);
@@ -98,28 +131,80 @@ fn main() {
         Ok(s) => {
             //rust doesn't let you assign when deconstructing, so this workaround is required
             let (temp_times, temp_args) = s;
+
+            if !cli_args {
+                args = temp_args;
+                //the default is all fields none, this is fine becuase if other options are used by
+                //themselves, specific errors come up.
+                if Args::default() == args {
+                    eprintln!("Directory not specified");
+                }
+            }
+
+            //for custom timings
             if let Some(s) = temp_times {
                 times = s;
             }
-            if !cli_args {
-                args = temp_args;
-                if Args::default() == args {
-                    eprintln!("Directory not specified");
+
+            //if latitude is specified, then longitude and elevaiton is required as well, so we
+            //just need to check for one of them
+            if let Some(lat) = args.lat {
+                let dir = args.directory.to_owned();
+                match dir {
+                    None => eprintln!("Directory needs to be specified"),
+                    Some(dir) => {
+                        let dir = dir.as_str();
+                        let dir_night = format!("{}/night", dir);
+                        let dir_night = dir_night.as_str();
+                        let dir_day = format!("{}/day", dir);
+                        let dir_day = dir_day.as_str();
+
+                        //checking if the directories exist
+                        if check_dir_exists(dir).is_err() {
+                            eprintln!("{}", Errors::FilePathError);
+                            process::exit(1);
+                        } else if check_dir_exists(dir_night).is_err()
+                            || check_dir_exists(dir_day).is_err()
+                        {
+                            eprintln!("Error: Make sure night and day directories are created within master directory");
+                            process::exit(1);
+                        } else {
+                            //now we know directories exist, so lets get the counts of the night
+                            //and day directories and send it to sun_timings function to get vector
+                            //of times based on sunset and sunrise
+                            let dir_count_night = WalkDir::new(dir_night)
+                                .min_depth(min_depth)
+                                .into_iter()
+                                .count();
+                            let dir_count_day = WalkDir::new(dir_day)
+                                .min_depth(min_depth)
+                                .into_iter()
+                                .count();
+                            times = sun_timings(
+                                lat,
+                                args.long.unwrap(),
+                                args.elevation.unwrap(),
+                                dir_count_day as u32,
+                                dir_count_night as u32,
+                            );
+                            min_depth = 2;
+                        }
+                    }
                 }
             }
         }
     }
 
-    if let Some(prog) = args.program {
+    //handle custom programs specified by user
+    if let Some(progs) = args.program {
         if args.directory.is_none() {
-            eprintln!(
-                "Error: The program option is to be used with a specified directory"
-            );
+            eprintln!("Error: The program option is to be used with a specified directory");
         } else {
-            program = Arc::new(Some(String::from(prog)));
+            program = Arc::new(Some(progs));
         }
     }
 
+    //handle custom backend specified by user
     if let Some(back) = args.backend {
         backend = Arc::new(Some(back));
         if args.directory.is_none() {
@@ -129,47 +214,43 @@ fn main() {
 
     if let Some(dir) = args.directory {
         let dir = dir.as_str();
-        let dir_count = WalkDir::new(dir).into_iter().count() - 1;
+        let dir_count = WalkDir::new(dir).min_depth(min_depth).into_iter().count();
+        let dir = canonicalize(dir).expect("Failed to canonicalize");
+        let dir = dir.to_str().expect("Couldn't convert to string");
+        let mut times_arg: Option<Vec<Time>> = None;
 
         match check_dir_exists(dir) {
             Err(e) => eprintln!("{}", e),
             Ok(_) => {
+                //if the times vector is empty, that means that user didn't specify, so we have to
+                //send "None" to wallpaper listener, which will create a evenly spread timings
+                //vector
                 if times.len() == 0 {
                     if 1440 % dir_count != 0 || dir_count == 0 {
                         eprintln!("{}", Errors::CountCompatError(dir_count));
-                    } else {
-                        let dir = canonicalize(dir).unwrap();
-                        let dir = dir.to_str().unwrap();
-                        if let Err(e) = wallpaper_listener(
-                            String::from(dir),
-                            dir_count,
-                            Arc::clone(&program),
-                            None,
-                            Arc::clone(&backend),
-                        ) {
-                            eprintln!("{}", e);
-                        }
                     }
                 } else {
-                    let dir = canonicalize(dir).unwrap();
-                    let dir = dir.to_str().unwrap();
-                    if let Err(e) = wallpaper_listener(
-                        String::from(dir),
-                        dir_count,
-                        Arc::clone(&program),
-                        Some(times),
-                        Arc::clone(&backend),
-                    ) {
-                        eprintln!("{}", e);
-                    }
+                    times_arg = Some(times);
                 }
             }
         }
+
+        if let Err(e) = wallpaper_listener(
+            String::from(dir),
+            dir_count,
+            Arc::clone(&program),
+            times_arg,
+            Arc::clone(&backend),
+            min_depth,
+        ) {
+            eprintln!("{}", e);
+        }
     }
 
+    //provides user with change schedule
     if let Some(dir) = args.schedule {
         let dir = dir.as_str();
-        let dir_count = WalkDir::new(dir).into_iter().count() - 1;
+        let dir_count = WalkDir::new(dir).min_depth(min_depth).into_iter().count();
 
         if 1440 % dir_count != 0 || dir_count == 0 {
             eprintln!("{}", Errors::CountCompatError(dir_count));
@@ -179,7 +260,7 @@ fn main() {
                 Ok(_) => {
                     let dir = canonicalize(dir).unwrap();
                     let dir = dir.to_str().unwrap();
-                    if let Err(e) = print_schedule(dir, dir_count) {
+                    if let Err(e) = print_schedule(dir, dir_count, min_depth) {
                         eprintln!("{}", e);
                     }
                 }
@@ -188,6 +269,7 @@ fn main() {
     }
 }
 
+//parse config file
 fn config_parse(cli_args: bool) -> Result<(Option<Vec<Time>>, Args), Box<dyn Error>> {
     let file = File::open(format!(
         "{}/dyn-wall-rs/config.toml",
@@ -208,7 +290,7 @@ fn config_parse(cli_args: bool) -> Result<(Option<Vec<Time>>, Args), Box<dyn Err
 
     if file.is_err() && cli_args {
         println!("A config file has been created");
-        return Ok((None, Args::default()))
+        return Ok((None, Args::default()));
     }
     let mut file = file.unwrap();
 
@@ -223,6 +305,7 @@ fn config_parse(cli_args: bool) -> Result<(Option<Vec<Time>>, Args), Box<dyn Err
             }
         }
         if empty {
+            //provide our own error if empty, rather than less descriptive error from serde
             return Err(Errors::ConfigFileError(ConfigFileErrors::Empty).into());
         }
     }
@@ -287,15 +370,18 @@ fn create_config() -> Result<(), Box<dyn Error>> {
 # Config options are stated below; uncomment them and fill them as you would from the command line.
 #times = []
 #directory = "/path/to/dir"
-#backend = "backend"
-#program = "command""#;
+#backend = "feh"
+#program = ["echo test1", "echo test2"]
+#lat = 99
+#long = -99
+#elevation = 99"#;
 
     config_file.write_all(default_test.as_bytes())?;
     Ok(())
 }
 
 fn check_dir_exists(dir: &str) -> Result<(), Errors> {
-    let mut dir_iter = sorted_dir_iter(dir);
+    let mut dir_iter = WalkDir::new(dir).into_iter();
 
     if dir_iter.next().unwrap().is_err() {
         Err(Errors::DirNonExistantError(dir.to_string()))
