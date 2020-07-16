@@ -43,7 +43,7 @@ pub mod time_track;
 const FULL_DAY: Time = Time {
     hours: 24,
     mins: 0,
-    total_mins: 0,
+    total_mins: 1440,
 };
 const MIDNIGHT: Time = Time {
     hours: 0,
@@ -509,7 +509,7 @@ pub fn sun_timings(
     }
     loop_time_night = loop_time_day.to_owned() + step_time_night;
 
-    while loop_time_night < (sunrise + Time::new(1440)) {
+    while loop_time_night < (sunrise + FULL_DAY) {
         if loop_time_night >= FULL_DAY {
             times.push(loop_time_night - FULL_DAY);
         } else {
