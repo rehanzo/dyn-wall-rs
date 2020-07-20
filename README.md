@@ -100,7 +100,7 @@ dyn-wall-rs can also be configured through a config file. When you run the progr
 Through this config file, you can use the same configuration options as through the command line, as well as use your own custom timings. If you would like to use custom timings, but configure everything else through the command line, you are able to do so. More details can be found in the automatically created config file.
 
 ### Syncing to the sun
-In order to sync the changing of wallpapers according to the sunset and sunrise timings, create directories within the master directory named "night" and "day". This will cycle through the wallpapers in the "day" directory if the current time is before the sunset time, and will cycle through the wallpapers in the "night" directory. After the directories are created and the wallpapers are placed in them, specify your latitude, longitude, and elevation, and let the program do its work! You can find your coordinates through [this] (https://www.mapcoordinates.net/en) website.
+In order to sync the changing of wallpapers according to the sunset and sunrise timings, create directories within the master directory named "night" and "day". This will cycle through the wallpapers in the "day" directory if the current time is before the sunset time, and will cycle through the wallpapers in the "night" directory. After the directories are created and the wallpapers are placed in them, specify your latitude, longitude, and elevation, and let the program do its work! You can find your coordinates through [this](https://www.mapcoordinates.net/en) website.
 
 ## Supported Desktop Environments
   * Windows
