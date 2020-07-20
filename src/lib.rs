@@ -499,7 +499,7 @@ pub fn sun_timings(
     let mut loop_time_day = sunrise.to_owned();
     //println!("{}", step_time_day.total_mins * dir_count_day + step_time_night.total_mins * dir_count_night);
 
-    while loop_time_day < sunset {
+    while loop_time_day <= sunset {
         if loop_time_day >= FULL_DAY {
             times.push(loop_time_day - FULL_DAY);
         } else {
@@ -507,7 +507,7 @@ pub fn sun_timings(
         }
         loop_time_day += step_time_day;
     }
-    loop_time_night = loop_time_day.to_owned() + step_time_night;
+    loop_time_night = sunset.to_owned() + step_time_night;
 
     while loop_time_night < (sunrise + FULL_DAY) {
         if loop_time_night >= FULL_DAY {

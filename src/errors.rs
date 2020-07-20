@@ -75,7 +75,7 @@ impl fmt::Display for Errors {
                     ConfigFileErrors::Empty => write!(f, "{}: config file is empty", template),
                     ConfigFileErrors::FileTimeMismatch => write!(f, "{}: the number of times listed in the config file does not equal the number of files in directory", template),
                     ConfigFileErrors::FormattingError => write!(f, "{}: config file not formatted correctly", template),
-                    ConfigFileErrors::NotFound => write!(f, "{}: config file not found. One has been created at {}{}dyn-wall-rs{}config for you to edit", template, config_dir().expect("No config directory found").to_str().unwrap(), DIR_SLASH, DIR_SLASH),
+                    ConfigFileErrors::NotFound => write!(f, "{}: config file not found. One has been created at {}{}dyn-wall-rs{}config.toml for you to edit", template, config_dir().expect("No config directory found").to_str().unwrap(), DIR_SLASH, DIR_SLASH),
                     ConfigFileErrors::OutOfOrder => write!(f, "{}: the order of the times are incorrect", template),
                     ConfigFileErrors::OutOfRange => write!(f, "{}: Custom times should be between 0 - 23:59", template), 
                     ConfigFileErrors::DuplicatesFound => write!(f, "{}: duplicate times found", template),

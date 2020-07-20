@@ -343,7 +343,7 @@ fn create_config() -> Result<(), Box<dyn Error>> {
         "{}/dyn-wall-rs/config.toml",
         config_dir.to_str().unwrap()
     ))?;
-    let default_test = r#"# Type the times at which you want the wallpaper to change as shown in the example below
+    let contents = r#"# Type the times at which you want the wallpaper to change as shown in the example below
 # The times must be in chronological order
 # The number of images and the number of times should be equal
 #
@@ -375,7 +375,7 @@ fn create_config() -> Result<(), Box<dyn Error>> {
 #long = -99
 #elevation = 99"#;
 
-    config_file.write_all(default_test.as_bytes())?;
+    config_file.write_all(contents.as_bytes())?;
     Ok(())
 }
 
