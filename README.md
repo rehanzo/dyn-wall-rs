@@ -116,6 +116,7 @@ In order to sync the changing of wallpapers according to the sunset and sunrise 
   * Window Managers that can have their wallpaper set using Feh
 
 ## Planned Feature(s)
+  * Ability to use different programs as a backend
 
 
 [RELEASES]: https://github.com/RAR27/dyn-wall-rs/releases
