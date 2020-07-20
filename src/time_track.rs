@@ -1,5 +1,5 @@
 /*
-   dyn-wall-rs 2.0.1
+   dyn-wall-rs 2.0.2
    Rehan Rana <rehanalirana@tuta.io>
    Helps user set a dynamic wallpaper and lockscreen. For more info and help, go to https://github.com/RAR27/dyn-wall-rs
    Copyright (C) 2020  Rehan Rana
