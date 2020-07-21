@@ -82,7 +82,7 @@ There are a few different ways to use dyn-wall-rs from the command line using th
     Prints out a schedule of the times at which the wallpaper would change if the auto option were to be used.
     
   * **-b, --backend \<BACKEND>**\
-    Uses the specified method as the backend to change the wallpaper. Type a supported DE name to use that DE's wallpaper changing command, or type `feh` to use feh. Case insensitive.
+    Uses the specified method as the backend to change the wallpaper. Type a supported DE name to use that DE's wallpaper changing command (Case insensitive), or type out a custom command to use as a backend. Similar to the `program` option, you can use `!WALL` in place of where the path of the wallpaper should be.
     
   * **--lat \<LATITUDE>**\
     Latitude of current location. Requires the use of the `long` and `elevation` options as well
