@@ -67,7 +67,7 @@ struct Args {
         short,
         long,
         value_name = "BACKEND",
-        help = "Uses the specified method as the backend to change the wallpaper"
+        help = "Uses the specified method as the backend to change the wallpaper. Custom command can be used"
     )]
     backend: Option<String>,
 
