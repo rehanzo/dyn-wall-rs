@@ -443,17 +443,10 @@ qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "
     let xfce_script = format!("{}{}{}", xfce_script_beg, filepath_set, xfce_script_end);
     let xfce_script_alt = format!("{}{}{}", xfce_script_alt_beg, filepath_set, xfce_script_end);
 
-    //to avoid uninitialized variable error
-    //safe because its not used unless custom backend specified
-    let mut backend_split: Vec<&str> = vec![];
-
     let mut cust_backend = false;
     if let Some(back) = backend {
         curr_de = UniCase::new(back);
         cust_backend = true;
-        for word in back.split_whitespace() {
-            backend_split.push(word);
-        }
     }
 
     if gnome.contains(&curr_de) {
@@ -480,29 +473,9 @@ qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "
         feh_handle
             .spawn()
             .map_err(|_| Errors::ProgramRunError(String::from("Feh")))?;
-    } else if cust_backend {
-        let mut backend_split = backend_split.into_iter();
-        let mut cust_handle = Command::new(backend_split.next().unwrap());
-        let mut wall_sent = false;
-        for word in backend_split {
-            if word == "!WALL" {
-                wall_sent = true;
-                cust_handle.arg(filepath_set);
-            } else {
-                cust_handle.arg(word);
-            }
-        }
-
-        if !wall_sent {
-            cust_handle.arg(filepath_set);
-        }
-
-        cust_handle.spawn().map_err(|_|Errors::ProgramRunError(curr_de.to_string()))?;
-    }
-    else {
+    } else {
         return Err(Errors::BackendNotFoundError(curr_de.to_string()).into());
     }
-
     println!("{} has been set as your wallpaper", filepath_set);
     Ok(())
 }

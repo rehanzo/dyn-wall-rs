@@ -35,6 +35,7 @@ pub mod time_track;
 #[derive(StructOpt, Default)]
 #[structopt(
     about = "Helps user set a dynamic wallpaper and lockscreen. Make sure the wallpapers are named in numerical order based on the order you want. For more info and help, go to https://github.com/RAR27/dyn-wall-rs",
+    author = "Rehan Rana <rehanalirana@tuta.io>"
 )]
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 struct Args {
