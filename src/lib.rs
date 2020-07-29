@@ -132,26 +132,13 @@ pub fn wallpaper_current_time(
 
 pub fn wallpaper_listener(
     dir: String,
-    dir_count: usize,
     progs: Arc<Option<Vec<String>>>,
-    times_arg: Option<Vec<Time>>,
+    times: Vec<Time>,
     backend: Arc<Option<String>>,
     min_depth: usize,
 ) -> Result<(), Box<dyn Error>> {
-    let (_, step_time, mut loop_time, mut times) = listener_setup(dir.as_str());
-    let step_time = step_time?;
     let mut scheduler = Scheduler::new();
     let mut sched_addto = scheduler.every(1.day()).at("0:00");
-
-    match times_arg {
-        None => {
-            for _ in 1..=dir_count {
-                times.push(loop_time);
-                loop_time += step_time;
-            }
-        }
-        Some(t) => times = t,
-    }
 
     wallpaper_current_time(
         &dir,
@@ -234,30 +221,17 @@ pub fn listener_setup(dir: &str) -> (usize, Result<Time, Errors>, Time, Vec<Time
     (dir_count, step_time, loop_time, times)
 }
 
-pub fn print_schedule(dir: &str, dir_count: usize, min_depth: usize) -> Result<(), Box<dyn Error>> {
-    let mut dir_iter = sorted_dir_iter(dir, min_depth);
-    let step_time = Time::new(((24.0 / dir_count as f32) * 60.0) as u32);
-    let mut loop_time = Time::default();
-    let mut i = 0;
-
-    if 1440 % dir_count != 0 || dir_count == 0 {
-        return Err(Errors::CountCompatError(dir_count).into());
-    }
-
-    dir_iter.next();
-
+pub fn print_schedule(dir: &str, min_depth: usize, times: &[Time]) -> Result<(), Box<dyn Error>> {
     let mut dir_iter = sorted_dir_iter(dir, min_depth);
 
-    while i < 24 * 60 {
+    for time in times.iter() {
         println!(
             "Image: {:?} Time: {}",
             dir_iter.next().unwrap()?.file_name(),
-            loop_time.twelve_hour()
+            time.twelve_hour()
         );
-        i += step_time.total_mins;
-
-        loop_time += step_time;
     }
+
     Ok(())
 }
 

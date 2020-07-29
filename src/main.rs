@@ -20,7 +20,7 @@
 use crate::errors::{ConfigFileErrors, Errors};
 use clap::AppSettings;
 use dirs::config_dir;
-use dyn_wall_rs::{print_schedule, sun_timings, time_track::Time, wallpaper_listener};
+use dyn_wall_rs::{print_schedule, sun_timings, time_track::Time, wallpaper_listener, listener_setup};
 use serde::{Deserialize, Serialize};
 use std::{
     error::Error, fs::create_dir_all, fs::File, io::Read, io::Write, str::FromStr, sync::Arc, process, fs::canonicalize,
@@ -59,9 +59,9 @@ struct Args {
         short,
         long,
         value_name = "DIRECTORY",
-        help = "Will present you with a schedule of when your wallpaper will change if you have not set custom times in the config file"
+        help = "Will present you with a schedule of when your wallpaper will change if you have not set custom times in the config file",
     )]
-    schedule: Option<String>,
+    schedule: Option<bool>,
 
     #[structopt(
         short,
@@ -146,7 +146,7 @@ fn main() {
 
             //if latitude is specified, then longitude and elevaiton is required as well, so we
             //just need to check for one of them
-            if let Some(lat) = args.lat {
+            else if let Some(lat) = args.lat {
                 let dir = args.directory.to_owned();
                 match dir {
                     None => eprintln!("Directory needs to be specified"),
@@ -215,7 +215,6 @@ fn main() {
         let dir_count = WalkDir::new(dir).min_depth(min_depth).into_iter().count();
         let dir = canonicalize(dir).expect("Failed to canonicalize");
         let dir = dir.to_str().expect("Couldn't convert to string");
-        let mut times_arg: Option<Vec<Time>> = None;
 
         match check_dir_exists(dir) {
             Err(e) => eprintln!("{}", e),
@@ -227,43 +226,36 @@ fn main() {
                     if 1440 % dir_count != 0 || dir_count == 0 {
                         eprintln!("{}", Errors::CountCompatError(dir_count));
                     }
-                } else {
-                    times_arg = Some(times);
+                    else {
+                        let (_, step_time, mut loop_time, _) = listener_setup(dir);
+                        match step_time {
+                            Err(e) => eprintln!("{}", e),
+                            Ok(step_time) => {
+                                for _ in 1..=dir_count {
+                                    times.push(loop_time);
+                                    loop_time += step_time;
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
-
-        if let Err(e) = wallpaper_listener(
+        if let Some(_) = args.schedule {
+            if let Err(e) = print_schedule(dir, min_depth, &times) {
+                eprintln!("{}", e);
+            }
+        }
+        else if let Err(e) = wallpaper_listener(
             String::from(dir),
-            dir_count,
             Arc::clone(&program),
-            times_arg,
+            times.clone(),
             Arc::clone(&backend),
             min_depth,
         ) {
             eprintln!("{}", e);
         }
-    }
 
-    //provides user with change schedule
-    if let Some(dir) = args.schedule {
-        let dir = dir.as_str();
-        let dir_count = WalkDir::new(dir).min_depth(min_depth).into_iter().count();
-
-        if 1440 % dir_count != 0 || dir_count == 0 {
-            eprintln!("{}", Errors::CountCompatError(dir_count));
-        } else {
-            match check_dir_exists(dir) {
-                Err(e) => eprintln!("{}", e),
-                Ok(_) => {
-                    let dir = canonicalize(dir).unwrap();
-                    let dir = dir.to_str().unwrap();
-                    if let Err(e) = print_schedule(dir, dir_count, min_depth) {
-                        eprintln!("{}", e);
-                    }
-                }
-            }
-        }
     }
 }
 
