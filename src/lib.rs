@@ -223,14 +223,18 @@ pub fn listener_setup(dir: &str) -> (usize, Result<Time, Errors>, Time, Vec<Time
 
 pub fn print_schedule(dir: &str, min_depth: usize, times: &[Time]) -> Result<(), Box<dyn Error>> {
     let mut dir_iter = sorted_dir_iter(dir, min_depth);
+    let mut sched_str = String::from("");
 
     for time in times.iter() {
-        println!(
-            "Image: {:?} Time: {}",
-            dir_iter.next().unwrap()?.file_name(),
+        let file = dir_iter.next().ok_or(Errors::ConfigFileError(ConfigFileErrors::FileTimeMismatch))??;
+        let file = file.file_name();
+        sched_str.push_str(&format!(
+            "\nImage: {:?} Time: {}",
+            file,
             time.twelve_hour()
-        );
+        ));
     }
+    println!("{}", sched_str);
 
     Ok(())
 }
