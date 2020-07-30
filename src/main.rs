@@ -59,7 +59,8 @@ struct Args {
         short,
         long,
         value_name = "DIRECTORY",
-        help = "Will present you with a schedule of when your wallpaper will change if you have not set custom times in the config file",
+        help = "Will present you with a schedule of when your wallpaper will change",
+        requires = "directory",
         takes_value = false,
     )]
     #[serde(skip)]
