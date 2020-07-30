@@ -78,8 +78,9 @@ There are a few different ways to use dyn-wall-rs from the command line using th
     You are also able to specifiy multiple programs to be synced with the wallpaper. Simply just insert the program names one after the other
     ex. `dyn-wall-rs -d /path/to/dir -p "betterlockscreen -u" "echo"
 
-  * **-s, --schedule \<DIRECTORY>**\
-    Prints out a schedule of the times at which the wallpaper would change if the auto option were to be used.
+  * **-s, --schedule**\
+    Prints out a schedule of the times at which the wallpaper will change depending on your settings. Use alongside the `--directory` option.\
+    **Note: Cannot be set through config file.**
     
   * **-b, --backend \<BACKEND>**\
     Uses the specified method as the backend to change the wallpaper. Type a supported DE name to use that DE's wallpaper changing command (Case insensitive), or type out a custom command to use as a backend. Similar to the `program` option, you can use `!WALL` in place of where the path of the wallpaper should be.
@@ -116,7 +117,6 @@ In order to sync the changing of wallpapers according to the sunset and sunrise 
   * Window Managers that can have their wallpaper set using Feh
 
 ## Planned Feature(s)
-  * Ability to use different programs as a backend
 
 
 [RELEASES]: https://github.com/RAR27/dyn-wall-rs/releases
