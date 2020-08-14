@@ -60,7 +60,7 @@ struct Args {
         long,
         value_name = "DIRECTORY",
         help = "Will present you with a schedule of when your wallpaper will change",
-        requires = "directory",
+        //requires = "directory",
         takes_value = false,
     )]
     #[serde(skip)]
@@ -78,7 +78,7 @@ struct Args {
         long,
         value_name = "LATITUDE",
         help = "Latitude of current location. Requires the use of the long and elevation options as well",
-        requires_all = &["long", "elevation"],
+        //requires_all = &["long", "elevation"],
         allow_hyphen_values(true)
     )]
     lat: Option<f64>,
@@ -87,7 +87,7 @@ struct Args {
         long,
         value_name = "LONGITUDE",
         help = "Longitude of current location. Requires the use of the lat and elevation options as well",
-        requires_all = &["lat", "elevation"],
+        //requires_all = &["lat", "elevation"],
         allow_hyphen_values(true)
     )]
     long: Option<f64>,
@@ -96,7 +96,7 @@ struct Args {
         long,
         value_name = "ELEVATION",
         help = "Elevation of current location. Requires the use of the lat and long options as well",
-        requires_all = &["lat", "long"],
+        //requires_all = &["lat", "long"],
         allow_hyphen_values(true)
     )]
     elevation: Option<f64>,
@@ -134,10 +134,8 @@ fn main() {
             //rust doesn't let you assign when deconstructing, so this workaround is required
             let (temp_times, temp_args) = s;
 
-            println!("{:?}\n{:?}\n{:?}\n{:?}\n{:?}\n{:?}\n{:?}", args.directory, args.program, args.schedule, args.backend, args.lat, args.long, args.elevation);
-
+            args = temp_args;
             if !cli_args_used {
-                args = temp_args;
                 //the default is all fields none, this is fine becuase if other options are used by
                 //themselves, specific errors come up.
                 if Args::default() == args {
@@ -201,7 +199,7 @@ fn main() {
 
     //handle custom programs specified by user
     if let Some(progs) = args.program {
-        if args.directory.is_none() {
+        if args.directory.is_none() && !args.schedule {
             eprintln!("Error: The program option is to be used with a specified directory");
         } else {
             program = Arc::new(Some(progs));
@@ -262,6 +260,9 @@ fn main() {
             eprintln!("{}", e);
         }
 
+    }
+    else if args.schedule {
+        eprintln!("Error: The schedule option is to be used alongside a specified directory");
     }
 }
 
