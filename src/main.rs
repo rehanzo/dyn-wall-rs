@@ -113,10 +113,11 @@ fn main() {
     //convert to clap to add setting to print help message if no argument sent
     //and make help message order same as Args struct order
     let clap = Args::clap().setting(AppSettings::DeriveDisplayOrder);
-    let mut args = Args::from_clap(&clap.get_matches());
+    let cli_args = Args::from_clap(&clap.get_matches());
     let mut program = Arc::new(None);
     let mut backend = Arc::new(None);
-    let cli_args = !(Args::default() == args);
+    let cli_args_used = !(Args::default() == cli_args);
+    let mut args: Args = Args::default();
     let mut times: Vec<Time> = vec![];
     //min depth of what files should be looked at, will remain as 1 if not syncing with sun, will
     //change to 2 if syncing with sun to ignore the directory names, focusing just on the files
@@ -124,7 +125,7 @@ fn main() {
 
     //pulling from config file if cli arguments are not specified, or if just custom timings were
     //specified
-    match config_parse(cli_args) {
+    match config_parse(cli_args, cli_args_used) {
         Err(e) => {
             eprint!("{}", e);
             process::exit(1);
@@ -133,7 +134,9 @@ fn main() {
             //rust doesn't let you assign when deconstructing, so this workaround is required
             let (temp_times, temp_args) = s;
 
-            if !cli_args {
+            println!("{:?}\n{:?}\n{:?}\n{:?}\n{:?}\n{:?}\n{:?}", args.directory, args.program, args.schedule, args.backend, args.lat, args.long, args.elevation);
+
+            if !cli_args_used {
                 args = temp_args;
                 //the default is all fields none, this is fine becuase if other options are used by
                 //themselves, specific errors come up.
@@ -147,7 +150,7 @@ fn main() {
                 times = s;
             }
 
-            //if latitude is specified, then longitude and elevaiton is required as well, so we
+            //if latitude is specified, then longitude and elevation is required as well, so we
             //just need to check for one of them
             else if let Some(lat) = args.lat {
                 let dir = args.directory.to_owned();
@@ -263,7 +266,7 @@ fn main() {
 }
 
 //parse config file
-fn config_parse(cli_args: bool) -> Result<(Option<Vec<Time>>, Args), Box<dyn Error>> {
+fn config_parse(args: Args, cli_args_used: bool) -> Result<(Option<Vec<Time>>, Args), Box<dyn Error>> {
     let file = File::open(format!(
         "{}/dyn-wall-rs/config.toml",
         config_dir()
@@ -281,7 +284,7 @@ fn config_parse(cli_args: bool) -> Result<(Option<Vec<Time>>, Args), Box<dyn Err
         }
     };
 
-    if file.is_err() && cli_args {
+    if file.is_err() && cli_args_used {
         println!("A config file has been created");
         return Ok((None, Args::default()));
     }
@@ -290,7 +293,7 @@ fn config_parse(cli_args: bool) -> Result<(Option<Vec<Time>>, Args), Box<dyn Err
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
 
-    if !cli_args {
+    if !cli_args_used {
         let mut empty = true;
         for line in contents.lines() {
             if !line.contains("#") {
@@ -311,6 +314,16 @@ fn config_parse(cli_args: bool) -> Result<(Option<Vec<Time>>, Args), Box<dyn Err
         Ok(s) => s,
     };
 
+    let args_mixed = Args {
+        directory: if args.directory.is_some() { args.directory } else { args_serialized.directory },
+        program: if args.program.is_some() { args.program } else { args_serialized.program },
+        schedule: args.schedule,
+        backend: if args.backend.is_some() { args.backend } else { args_serialized.backend },
+        lat: if args.lat.is_some() { args.lat } else { args_serialized.lat },
+        long: if args.long.is_some() { args.long } else { args_serialized.long },
+        elevation: if args.elevation.is_some() { args.elevation } else { args_serialized.elevation },
+    };
+
     let times_string = toml::from_str(contents.as_str());
     let times_serialized: Times = match times_string {
         Err(e) => {
@@ -320,11 +333,11 @@ fn config_parse(cli_args: bool) -> Result<(Option<Vec<Time>>, Args), Box<dyn Err
     };
 
     match times_serialized.times {
-        None => Ok((None, args_serialized)),
+        None => Ok((None, args_mixed)),
         Some(s) => {
             let times: Result<Vec<_>, _> = s.iter().map(|time| Time::from_str(time)).collect();
             let times = times?;
-            Ok((Some(times), args_serialized))
+            Ok((Some(times), args_mixed))
         }
     }
 }
