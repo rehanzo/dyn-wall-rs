@@ -138,12 +138,10 @@ fn main() {
             let (temp_times, temp_args) = s;
 
             args = temp_args;
-            if !cli_args_used {
-                //the default is all fields none, this is fine becuase if other options are used by
-                //themselves, specific errors come up.
-                if Args::default() == args {
-                    eprintln!("Directory not specified");
-                }
+            //the default is all fields none, this is fine becuase if other options are used by
+            //themselves, specific errors come up.
+            if Args::default() == args {
+                eprintln!("Directory not specified");
             }
 
             //for custom timings
@@ -295,9 +293,8 @@ fn config_parse(
         }
     };
 
-    if file.is_err() && cli_args_used {
-        println!("A config file has been created");
-        return Ok((None, Args::default()));
+    if file.is_err() {
+        return Err("A config file has been created".into());
     }
     let mut file = file.unwrap();
 
