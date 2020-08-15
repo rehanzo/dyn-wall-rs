@@ -203,6 +203,10 @@ fn main() {
                     }
                 }
             }
+            else if args.long.is_some() {
+                eprintln!("Error: long neds to be specified with lat");
+                process::exit(1);
+            }
         }
     }
 
