@@ -20,10 +20,13 @@
 use crate::errors::{ConfigFileErrors, Errors};
 use clap::AppSettings;
 use dirs::config_dir;
-use dyn_wall_rs::{print_schedule, sun_timings, time_track::Time, wallpaper_listener, listener_setup};
+use dyn_wall_rs::{
+    listener_setup, print_schedule, sun_timings, time_track::Time, wallpaper_listener,
+};
 use serde::{Deserialize, Serialize};
 use std::{
-    error::Error, fs::create_dir_all, fs::File, io::Read, io::Write, str::FromStr, sync::Arc, process, fs::canonicalize,
+    error::Error, fs::canonicalize, fs::create_dir_all, fs::File, io::Read, io::Write, process,
+    str::FromStr, sync::Arc,
 };
 use structopt::StructOpt;
 use toml;
@@ -34,7 +37,7 @@ pub mod time_track;
 
 #[derive(StructOpt, Default)]
 #[structopt(
-    about = "Helps user set a dynamic wallpaper and lockscreen. Make sure the wallpapers are named in numerical order based on the order you want. For more info and help, go to https://github.com/RAR27/dyn-wall-rs",
+    about = "Helps user set a dynamic wallpaper and lockscreen. Make sure the wallpapers are named in numerical order based on the order you want. For more info and help, go to https://github.com/RAR27/dyn-wall-rs"
 )]
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 struct Args {
@@ -77,7 +80,7 @@ struct Args {
     #[structopt(
         long,
         value_name = "LATITUDE",
-        help = "Latitude of current location. Requires the use of the long and elevation options as well",
+        help = "Latitude of current location. Requires the use of the long option",
         //requires_all = &["long", "elevation"],
         allow_hyphen_values(true)
     )]
@@ -86,7 +89,7 @@ struct Args {
     #[structopt(
         long,
         value_name = "LONGITUDE",
-        help = "Longitude of current location. Requires the use of the lat and elevation options as well",
+        help = "Longitude of current location. Requires the use of the lat option",
         //requires_all = &["lat", "elevation"],
         allow_hyphen_values(true)
     )]
@@ -95,7 +98,7 @@ struct Args {
     #[structopt(
         long,
         value_name = "ELEVATION",
-        help = "Elevation of current location. Requires the use of the lat and long options as well",
+        help = "Elevation of current location. Optional, but allows for a more accurate calculation of sunrise and sunset times",
         //requires_all = &["lat", "long"],
         allow_hyphen_values(true)
     )]
@@ -147,49 +150,57 @@ fn main() {
             if let Some(s) = temp_times {
                 times = s;
             }
-
             //if latitude is specified, then longitude and elevation is required as well, so we
             //just need to check for one of them
             else if let Some(lat) = args.lat {
-                let dir = args.directory.to_owned();
-                match dir {
-                    None => eprintln!("Directory needs to be specified"),
-                    Some(dir) => {
-                        let dir = dir.as_str();
-                        let dir_night = format!("{}/night", dir);
-                        let dir_night = dir_night.as_str();
-                        let dir_day = format!("{}/day", dir);
-                        let dir_day = dir_day.as_str();
+                if args.long.is_none() {
+                    eprintln!("Error: lat needs to be specified with long");
+                    process::exit(1);
+                } else {
+                    let dir = args.directory.to_owned();
+                    match dir {
+                        None => eprintln!("Error: Directory needs to be specified"),
+                        Some(dir) => {
+                            let dir = dir.as_str();
+                            let dir_night = format!("{}/night", dir);
+                            let dir_night = dir_night.as_str();
+                            let dir_day = format!("{}/day", dir);
+                            let dir_day = dir_day.as_str();
 
-                        //checking if the directories exist
-                        if check_dir_exists(dir).is_err() {
-                            eprintln!("{}", Errors::FilePathError);
-                            process::exit(1);
-                        } else if check_dir_exists(dir_night).is_err()
-                            || check_dir_exists(dir_day).is_err()
-                        {
-                            eprintln!("Error: Make sure night and day directories are created within master directory");
-                            process::exit(1);
-                        } else {
-                            //now we know directories exist, so lets get the counts of the night
-                            //and day directories and send it to sun_timings function to get vector
-                            //of times based on sunset and sunrise
-                            let dir_count_night = WalkDir::new(dir_night)
-                                .min_depth(min_depth)
-                                .into_iter()
-                                .count();
-                            let dir_count_day = WalkDir::new(dir_day)
-                                .min_depth(min_depth)
-                                .into_iter()
-                                .count();
-                            times = sun_timings(
-                                lat,
-                                args.long.unwrap(),
-                                args.elevation.unwrap(),
-                                dir_count_day as u32,
-                                dir_count_night as u32,
-                            );
-                            min_depth = 2;
+                            //checking if the directories exist
+                            if check_dir_exists(dir).is_err() {
+                                eprintln!("{}", Errors::FilePathError);
+                                process::exit(1);
+                            } else if check_dir_exists(dir_night).is_err()
+                                || check_dir_exists(dir_day).is_err()
+                            {
+                                eprintln!("Error: Make sure night and day directories are created within master directory");
+                                process::exit(1);
+                            } else {
+                                //now we know directories exist, so lets get the counts of the night
+                                //and day directories and send it to sun_timings function to get vector
+                                //of times based on sunset and sunrise
+                                let dir_count_night = WalkDir::new(dir_night)
+                                    .min_depth(min_depth)
+                                    .into_iter()
+                                    .count();
+                                let dir_count_day = WalkDir::new(dir_day)
+                                    .min_depth(min_depth)
+                                    .into_iter()
+                                    .count();
+                                times = sun_timings(
+                                    lat,
+                                    args.long.unwrap(),
+                                    if let Some(elevation) = args.elevation {
+                                        elevation
+                                    } else {
+                                        0.0
+                                    },
+                                    dir_count_day as u32,
+                                    dir_count_night as u32,
+                                );
+                                min_depth = 2;
+                            }
                         }
                     }
                 }
@@ -229,8 +240,7 @@ fn main() {
                 if times.len() == 0 {
                     if 1440 % dir_count != 0 || dir_count == 0 {
                         eprintln!("{}", Errors::CountCompatError(dir_count));
-                    }
-                    else {
+                    } else {
                         let (_, step_time, mut loop_time, _) = listener_setup(dir);
                         match step_time {
                             Err(e) => eprintln!("{}", e),
@@ -249,8 +259,7 @@ fn main() {
             if let Err(e) = print_schedule(dir, min_depth, &times) {
                 eprintln!("{}", e);
             }
-        }
-        else if let Err(e) = wallpaper_listener(
+        } else if let Err(e) = wallpaper_listener(
             String::from(dir),
             Arc::clone(&program),
             times.clone(),
@@ -259,15 +268,16 @@ fn main() {
         ) {
             eprintln!("{}", e);
         }
-
-    }
-    else if args.schedule {
+    } else if args.schedule {
         eprintln!("Error: The schedule option is to be used alongside a specified directory");
     }
 }
 
 //parse config file
-fn config_parse(args: Args, cli_args_used: bool) -> Result<(Option<Vec<Time>>, Args), Box<dyn Error>> {
+fn config_parse(
+    args: Args,
+    cli_args_used: bool,
+) -> Result<(Option<Vec<Time>>, Args), Box<dyn Error>> {
     let file = File::open(format!(
         "{}/dyn-wall-rs/config.toml",
         config_dir()
@@ -315,14 +325,39 @@ fn config_parse(args: Args, cli_args_used: bool) -> Result<(Option<Vec<Time>>, A
         Ok(s) => s,
     };
 
+    //merging arguments from cli and from config file
     let args_mixed = Args {
-        directory: if args.directory.is_some() { args.directory } else { args_serialized.directory },
-        program: if args.program.is_some() { args.program } else { args_serialized.program },
+        directory: if args.directory.is_some() {
+            args.directory
+        } else {
+            args_serialized.directory
+        },
+        program: if args.program.is_some() {
+            args.program
+        } else {
+            args_serialized.program
+        },
         schedule: args.schedule,
-        backend: if args.backend.is_some() { args.backend } else { args_serialized.backend },
-        lat: if args.lat.is_some() { args.lat } else { args_serialized.lat },
-        long: if args.long.is_some() { args.long } else { args_serialized.long },
-        elevation: if args.elevation.is_some() { args.elevation } else { args_serialized.elevation },
+        backend: if args.backend.is_some() {
+            args.backend
+        } else {
+            args_serialized.backend
+        },
+        lat: if args.lat.is_some() {
+            args.lat
+        } else {
+            args_serialized.lat
+        },
+        long: if args.long.is_some() {
+            args.long
+        } else {
+            args_serialized.long
+        },
+        elevation: if args.elevation.is_some() {
+            args.elevation
+        } else {
+            args_serialized.elevation
+        },
     };
 
     let times_string = toml::from_str(contents.as_str());

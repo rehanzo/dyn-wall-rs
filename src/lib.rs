@@ -17,7 +17,10 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-use crate::{ time_track::Time, errors::{ConfigFileErrors, Errors} };
+use crate::{
+    errors::{ConfigFileErrors, Errors},
+    time_track::Time,
+};
 use chrono::{Local, Timelike, Utc};
 use clokwerk::{Scheduler, TimeUnits};
 use std::{env, error::Error, process, process::Command, sync::Arc, thread::sleep, time::Duration};
@@ -226,13 +229,11 @@ pub fn print_schedule(dir: &str, min_depth: usize, times: &[Time]) -> Result<(),
     let mut sched_str = String::from("");
 
     for time in times.iter() {
-        let file = dir_iter.next().ok_or(Errors::ConfigFileError(ConfigFileErrors::FileTimeMismatch))??;
+        let file = dir_iter
+            .next()
+            .ok_or(Errors::ConfigFileError(ConfigFileErrors::FileTimeMismatch))??;
         let file = file.file_name();
-        sched_str.push_str(&format!(
-            "\nImage: {:?} Time: {}",
-            file,
-            time.twelve_hour()
-        ));
+        sched_str.push_str(&format!("\nImage: {:?} Time: {}", file, time.twelve_hour()));
     }
     println!("{}", sched_str);
 
@@ -475,9 +476,10 @@ qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "
             cust_handle.arg(filepath_set);
         }
 
-        cust_handle.spawn().map_err(|_|Errors::ProgramRunError(curr_de.to_string()))?;
-    }
-    else {
+        cust_handle
+            .spawn()
+            .map_err(|_| Errors::ProgramRunError(curr_de.to_string()))?;
+    } else {
         return Err(Errors::BackendNotFoundError(curr_de.to_string()).into());
     }
 
