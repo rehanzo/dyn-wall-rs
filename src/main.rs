@@ -20,13 +20,10 @@
 use crate::errors::{ConfigFileErrors, Errors};
 use clap::AppSettings;
 use dirs::config_dir;
-use dyn_wall_rs::{
-    listener_setup, print_schedule, sun_timings, time_track::Time, wallpaper_listener,
-};
+use dyn_wall_rs::{print_schedule, sun_timings, time_track::Time, wallpaper_listener, check_dir_exists, listener_setup};
 use serde::{Deserialize, Serialize};
 use std::{
-    error::Error, fs::canonicalize, fs::create_dir_all, fs::File, io::Read, io::Write, process,
-    str::FromStr, sync::Arc,
+    error::Error, fs::create_dir_all, fs::File, io::Read, io::Write, str::FromStr, sync::Arc, process, fs::canonicalize,
 };
 use structopt::StructOpt;
 use toml;
@@ -160,44 +157,12 @@ fn main() {
                         None => eprintln!("Error: Directory needs to be specified"),
                         Some(dir) => {
                             let dir = dir.as_str();
-                            let dir_night = format!("{}/night", dir);
-                            let dir_night = dir_night.as_str();
-                            let dir_day = format!("{}/day", dir);
-                            let dir_day = dir_day.as_str();
-
-                            //checking if the directories exist
-                            if check_dir_exists(dir).is_err() {
-                                eprintln!("{}", Errors::FilePathError);
-                                process::exit(1);
-                            } else if check_dir_exists(dir_night).is_err()
-                                || check_dir_exists(dir_day).is_err()
-                            {
-                                eprintln!("Error: Make sure night and day directories are created within master directory");
-                                process::exit(1);
-                            } else {
-                                //now we know directories exist, so lets get the counts of the night
-                                //and day directories and send it to sun_timings function to get vector
-                                //of times based on sunset and sunrise
-                                let dir_count_night = WalkDir::new(dir_night)
-                                    .min_depth(min_depth)
-                                    .into_iter()
-                                    .count();
-                                let dir_count_day = WalkDir::new(dir_day)
-                                    .min_depth(min_depth)
-                                    .into_iter()
-                                    .count();
-                                times = sun_timings(
-                                    lat,
-                                    args.long.unwrap(),
-                                    if let Some(elevation) = args.elevation {
-                                        elevation
-                                    } else {
-                                        0.0
-                                    },
-                                    dir_count_day as u32,
-                                    dir_count_night as u32,
-                                );
-                                min_depth = 2;
+                            match sun_timings(dir, lat, args.long.unwrap(), args.elevation.or_else(||Some(0.0)).unwrap()) {
+                                Err(e) => eprintln!("Error: {}", e),
+                                Ok(s) => {
+                                    times = s;
+                                    min_depth = 2;
+                                }
                             }
                         }
                     }
@@ -421,14 +386,4 @@ fn create_config() -> Result<(), Box<dyn Error>> {
 
     config_file.write_all(contents.as_bytes())?;
     Ok(())
-}
-
-fn check_dir_exists(dir: &str) -> Result<(), Errors> {
-    let mut dir_iter = WalkDir::new(dir).into_iter();
-
-    if dir_iter.next().unwrap().is_err() {
-        Err(Errors::DirNonExistantError(dir.to_string()))
-    } else {
-        Ok(())
-    }
 }

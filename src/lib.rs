@@ -20,6 +20,7 @@
 use crate::{
     errors::{ConfigFileErrors, Errors},
     time_track::Time,
+
 };
 use chrono::{Local, Timelike, Utc};
 use clokwerk::{Scheduler, TimeUnits};
@@ -488,14 +489,18 @@ qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "
 }
 
 pub fn sun_timings(
+    dir: &str,
     lat: f64,
-    lon: f64,
+    long: f64,
     elevation: f64,
-    dir_count_day: u32,
-    dir_count_night: u32,
-) -> Vec<Time> {
+) -> Result<Vec<Time>, Box<dyn Error>> {
+    let dir_night = format!("{}/night", dir);
+    let dir_night = dir_night.as_str();
+    let dir_day = format!("{}/day", dir);
+    let dir_day = dir_day.as_str();
+    let (dir_count_day, dir_count_night) = sun_timings_dir_counts(dir, dir_day, dir_night)?;
     let mut times: Vec<Time> = vec![];
-    let (sunrise, sunset) = sun_times::sun_times(Utc::today(), lat, lon, elevation);
+    let (sunrise, sunset) = sun_times::sun_times(Utc::today(), lat, long, elevation);
     let (sunset, sunrise) = (sunset.with_timezone(&Local), sunrise.with_timezone(&Local));
     let sunset = Time::new((sunset.hour() * 60) + sunset.minute());
     let sunrise = Time::new((sunrise.hour() * 60) + sunrise.minute());
@@ -524,5 +529,40 @@ pub fn sun_timings(
         }
         loop_time_night += step_time_night;
     }
-    times
+    Ok(times)
+}
+
+fn sun_timings_dir_counts(dir: &str, dir_day: &str, dir_night: &str) -> Result<(u32, u32), Box<dyn Error>> {
+
+    //checking if the directories exist
+    if check_dir_exists(dir).is_err() {
+        return Err(Errors::FilePathError.into());
+    } else if check_dir_exists(dir_night).is_err()
+        || check_dir_exists(dir_day).is_err()
+    {
+        eprintln!("Error: Make sure night and day directories are created within master directory");
+        process::exit(1);
+    } else {
+        //now we know directories exist, so lets get the counts of the night
+        //and day directories and send it to sun_timings function to get vector
+        //of times based on sunset and sunrise
+        let dir_count_night = WalkDir::new(dir_night)
+            .min_depth(1)
+            .into_iter()
+            .count();
+        let dir_count_day = WalkDir::new(dir_day)
+            .min_depth(1)
+            .into_iter()
+            .count();
+        Ok((dir_count_day as u32, dir_count_night as u32))
+    }
+}
+pub fn check_dir_exists(dir: &str) -> Result<(), Errors> {
+    let mut dir_iter = WalkDir::new(dir).into_iter();
+
+    if dir_iter.next().unwrap().is_err() {
+        Err(Errors::DirNonExistantError(dir.to_string()))
+    } else {
+        Ok(())
+    }
 }
