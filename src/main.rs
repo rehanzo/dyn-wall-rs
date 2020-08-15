@@ -120,7 +120,7 @@ fn main() {
     let mut program = Arc::new(None);
     let mut backend = Arc::new(None);
     let cli_args_used = !(Args::default() == cli_args);
-    let mut args: Args = Args::default();
+    let args: Args;
     let mut times: Vec<Time> = vec![];
     //min depth of what files should be looked at, will remain as 1 if not syncing with sun, will
     //change to 2 if syncing with sun to ignore the directory names, focusing just on the files
