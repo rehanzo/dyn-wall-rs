@@ -18,6 +18,7 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 use crate::{
+    config::Args,
     errors::{ConfigFileErrors, Errors},
     time_track::Time,
 };
@@ -27,7 +28,6 @@ use std::{env, error::Error, process, process::Command, sync::Arc, thread::sleep
 use walkdir::{IntoIter, WalkDir};
 
 use run_script::ScriptOptions;
-use sun_times;
 use unicase::UniCase;
 
 //crates used to change windows wallpaper
@@ -40,6 +40,7 @@ use winapi::um::winuser::{
     SystemParametersInfoW, SPIF_SENDCHANGE, SPIF_UPDATEINIFILE, SPI_SETDESKWALLPAPER,
 };
 
+pub mod config;
 pub mod errors;
 pub mod time_track;
 
@@ -135,13 +136,14 @@ pub fn wallpaper_current_time(
 
 pub fn wallpaper_listener(
     dir: String,
-    progs: Arc<Option<Vec<String>>>,
-    times: Vec<Time>,
-    backend: Arc<Option<String>>,
+    args: Arc<Args>,
     min_depth: usize,
 ) -> Result<(), Box<dyn Error>> {
     let mut scheduler = Scheduler::new();
     let mut sched_addto = scheduler.every(1.day()).at("0:00");
+    let progs = Arc::new(args.programs.to_owned());
+    let backend = Arc::new(args.backend.to_owned());
+    let times = args.times.to_owned().unwrap();
 
     wallpaper_current_time(
         &dir,
@@ -224,11 +226,11 @@ pub fn listener_setup(dir: &str) -> (usize, Result<Time, Errors>, Time, Vec<Time
     (dir_count, step_time, loop_time, times)
 }
 
-pub fn print_schedule(dir: &str, min_depth: usize, times: &[Time]) -> Result<(), Box<dyn Error>> {
+pub fn print_schedule(dir: &str, min_depth: usize, args: Arc<Args>) -> Result<(), Box<dyn Error>> {
     let mut dir_iter = sorted_dir_iter(dir, min_depth);
     let mut sched_str = String::from("");
 
-    for time in times.iter() {
+    for time in args.times.to_owned().unwrap().iter() {
         let file = dir_iter
             .next()
             .ok_or(Errors::ConfigFileError(ConfigFileErrors::FileTimeMismatch))??;

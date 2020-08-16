@@ -21,133 +21,83 @@ use crate::errors::{ConfigFileErrors, Errors};
 use clap::AppSettings;
 use dirs::config_dir;
 use dyn_wall_rs::{
-    check_dir_exists, listener_setup, print_schedule, sun_timings, time_track::Time,
+    check_dir_exists,
+    config::{Args, Times},
+    listener_setup, print_schedule, sun_timings,
+    time_track::Time,
     wallpaper_listener,
 };
-use serde::{Deserialize, Serialize};
 use std::{
     error::Error, fs::canonicalize, fs::create_dir_all, fs::File, io::Read, io::Write, process,
     str::FromStr, sync::Arc,
 };
 use structopt::StructOpt;
-use toml;
 use walkdir::WalkDir;
 
+pub mod config;
 pub mod errors;
 pub mod time_track;
-
-#[derive(StructOpt, Default)]
-#[structopt(
-    about = "Helps user set a dynamic wallpaper and lockscreen. Make sure the wallpapers are named in numerical order based on the order you want. For more info and help, go to https://github.com/RAR27/dyn-wall-rs"
-)]
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-struct Args {
-    #[structopt(
-        short,
-        long,
-        value_name = "DIRECTORY",
-        help = "Sets the wallpaper based on the current time and changes the wallpaper throughout the day. The wallpaper will change based on the user specified times within the config file or, if custom timings are not set, it will automatically divide the wallpapers into equal parts throughout the day.",
-        conflicts_with = "Schedule"
-    )]
-    directory: Option<String>,
-
-    #[structopt(
-        short = "p",
-        long = "programs",
-        value_name = "COMMAND",
-        help = r#"Sends image as argument to command specified. Use alongside listener or custom. If the command itself contains arguments, wrap in quotation ex. dyn-wall-rs -a /path/to/dir -l "betterlockscreen -u""#
-    )]
-    program: Option<Vec<String>>,
-
-    #[structopt(
-        short,
-        long,
-        value_name = "DIRECTORY",
-        help = "Will present you with a schedule of when your wallpaper will change",
-        //requires = "directory",
-        takes_value = false,
-    )]
-    #[serde(skip)]
-    schedule: bool,
-
-    #[structopt(
-        short,
-        long,
-        value_name = "BACKEND",
-        help = "Uses the specified method as the backend to change the wallpaper. Custom command can be used"
-    )]
-    backend: Option<String>,
-
-    #[structopt(
-        long,
-        value_name = "LATITUDE",
-        help = "Latitude of current location. Requires the use of the long option",
-        //requires_all = &["long", "elevation"],
-        allow_hyphen_values(true)
-    )]
-    lat: Option<f64>,
-
-    #[structopt(
-        long,
-        value_name = "LONGITUDE",
-        help = "Longitude of current location. Requires the use of the lat option",
-        //requires_all = &["lat", "elevation"],
-        allow_hyphen_values(true)
-    )]
-    long: Option<f64>,
-
-    #[structopt(
-        long,
-        value_name = "ELEVATION",
-        help = "Elevation of current location. Optional, but allows for a more accurate calculation of sunrise and sunset times",
-        //requires_all = &["lat", "long"],
-        allow_hyphen_values(true)
-    )]
-    elevation: Option<f64>,
-}
-
-//not optimal, but it seems serde can really only work on structs. Would be great if I could
-//serialize straight into a vector, but it doesn't seem like I can, so this is a workaround
-#[derive(Deserialize, Serialize)]
-struct Times {
-    times: Option<Vec<String>>,
-}
 
 fn main() {
     //convert to clap to add setting to print help message if no argument sent
     //and make help message order same as Args struct order
     let clap = Args::clap().setting(AppSettings::DeriveDisplayOrder);
     let cli_args = Args::from_clap(&clap.get_matches());
-    let mut program = Arc::new(None);
-    let mut backend = Arc::new(None);
     let cli_args_used = !(Args::default() == cli_args);
-    let args: Args;
-    let mut times: Vec<Time> = vec![];
+    let mut args: Args;
     //min depth of what files should be looked at, will remain as 1 if not syncing with sun, will
     //change to 2 if syncing with sun to ignore the directory names, focusing just on the files
     let mut min_depth = 1;
 
     //pulling from config file if cli arguments are not specified, or if just custom timings were
     //specified
-    match config_parse(cli_args, cli_args_used) {
+    match config_parse(cli_args_used) {
         Err(e) => {
             eprint!("{}", e);
             process::exit(1);
         }
         Ok(s) => {
             //rust doesn't let you assign when deconstructing, so this workaround is required
-            let (temp_times, temp_args) = s;
+            let (temp_times, config_args) = s;
 
-            args = temp_args;
+            args = Args {
+                directory: if cli_args.directory.is_some() {
+                    cli_args.directory
+                } else {
+                    config_args.directory
+                },
+                programs: if cli_args.programs.is_some() {
+                    cli_args.programs
+                } else {
+                    config_args.programs
+                },
+                schedule: cli_args.schedule,
+                backend: if cli_args.backend.is_some() {
+                    cli_args.backend
+                } else {
+                    config_args.backend
+                },
+                lat: if cli_args.lat.is_some() {
+                    cli_args.lat
+                } else {
+                    config_args.lat
+                },
+                long: if cli_args.long.is_some() {
+                    cli_args.long
+                } else {
+                    config_args.long
+                },
+                elevation: if cli_args.elevation.is_some() {
+                    cli_args.elevation
+                } else {
+                    config_args.elevation
+                },
+                times: temp_times,
+            };
             //the default is all fields none, this is fine becuase if other options are used by
             //themselves, specific errors come up.
             if Args::default() == args {
                 eprintln!("Directory not specified");
-            }
-
-            //for custom timings
-            if let Some(s) = temp_times {
-                times = s;
             }
             //if latitude is specified, then longitude and elevation is required as well, so we
             //just need to check for one of them
@@ -169,7 +119,7 @@ fn main() {
                             ) {
                                 Err(e) => eprintln!("Error: {}", e),
                                 Ok(s) => {
-                                    times = s;
+                                    args.times = Some(s);
                                     min_depth = 2;
                                 }
                             }
@@ -184,23 +134,20 @@ fn main() {
     }
 
     //handle custom programs specified by user
-    if let Some(progs) = args.program {
+    if args.programs.is_some() {
         if args.directory.is_none() && !args.schedule {
             eprintln!("Error: The program option is to be used with a specified directory");
-        } else {
-            program = Arc::new(Some(progs));
         }
     }
 
     //handle custom backend specified by user
-    if let Some(back) = args.backend {
-        backend = Arc::new(Some(back));
+    if args.backend.is_some() {
         if args.directory.is_none() {
             eprintln!("Error: The backend option is to be used with a specified directory");
         }
     }
 
-    if let Some(dir) = args.directory {
+    if let Some(dir) = &args.directory {
         let dir = dir.as_str();
         let dir_count = WalkDir::new(dir).min_depth(min_depth).into_iter().count();
         let dir = canonicalize(dir).expect("Failed to canonicalize");
@@ -212,7 +159,7 @@ fn main() {
                 //if the times vector is empty, that means that user didn't specify, so we have to
                 //send "None" to wallpaper listener, which will create a evenly spread timings
                 //vector
-                if times.len() == 0 {
+                if args.times.is_none() {
                     if 1440 % dir_count != 0 || dir_count == 0 {
                         eprintln!("{}", Errors::CountCompatError(dir_count));
                     } else {
@@ -220,27 +167,26 @@ fn main() {
                         match step_time {
                             Err(e) => eprintln!("{}", e),
                             Ok(step_time) => {
+                                let mut times: Vec<Time> = vec![];
                                 for _ in 1..=dir_count {
                                     times.push(loop_time);
                                     loop_time += step_time;
                                 }
+                                args.times = Some(times);
                             }
                         }
                     }
                 }
             }
         }
-        if args.schedule {
-            if let Err(e) = print_schedule(dir, min_depth, &times) {
+        let args_arc = Arc::new(args);
+        if args_arc.schedule {
+            if let Err(e) = print_schedule(dir, min_depth, Arc::clone(&args_arc)) {
                 eprintln!("{}", e);
             }
-        } else if let Err(e) = wallpaper_listener(
-            String::from(dir),
-            Arc::clone(&program),
-            times.clone(),
-            Arc::clone(&backend),
-            min_depth,
-        ) {
+        } else if let Err(e) =
+            wallpaper_listener(String::from(dir), Arc::clone(&args_arc), min_depth)
+        {
             eprintln!("{}", e);
         }
     } else if args.schedule {
@@ -249,10 +195,7 @@ fn main() {
 }
 
 //parse config file
-fn config_parse(
-    args: Args,
-    cli_args_used: bool,
-) -> Result<(Option<Vec<Time>>, Args), Box<dyn Error>> {
+fn config_parse(cli_args_used: bool) -> Result<(Option<Vec<Time>>, Args), Box<dyn Error>> {
     let file = File::open(format!(
         "{}/dyn-wall-rs/config.toml",
         config_dir()
@@ -299,41 +242,6 @@ fn config_parse(
         Ok(s) => s,
     };
 
-    //merging arguments from cli and from config file
-    let args_mixed = Args {
-        directory: if args.directory.is_some() {
-            args.directory
-        } else {
-            args_serialized.directory
-        },
-        program: if args.program.is_some() {
-            args.program
-        } else {
-            args_serialized.program
-        },
-        schedule: args.schedule,
-        backend: if args.backend.is_some() {
-            args.backend
-        } else {
-            args_serialized.backend
-        },
-        lat: if args.lat.is_some() {
-            args.lat
-        } else {
-            args_serialized.lat
-        },
-        long: if args.long.is_some() {
-            args.long
-        } else {
-            args_serialized.long
-        },
-        elevation: if args.elevation.is_some() {
-            args.elevation
-        } else {
-            args_serialized.elevation
-        },
-    };
-
     let times_string = toml::from_str(contents.as_str());
     let times_serialized: Times = match times_string {
         Err(e) => {
@@ -343,11 +251,11 @@ fn config_parse(
     };
 
     match times_serialized.times {
-        None => Ok((None, args_mixed)),
+        None => Ok((None, args_serialized)),
         Some(s) => {
             let times: Result<Vec<_>, _> = s.iter().map(|time| Time::from_str(time)).collect();
             let times = times?;
-            Ok((Some(times), args_mixed))
+            Ok((Some(times), args_serialized))
         }
     }
 }
