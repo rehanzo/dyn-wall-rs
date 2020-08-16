@@ -20,10 +20,14 @@
 use crate::errors::{ConfigFileErrors, Errors};
 use clap::AppSettings;
 use dirs::config_dir;
-use dyn_wall_rs::{print_schedule, sun_timings, time_track::Time, wallpaper_listener, check_dir_exists, listener_setup};
+use dyn_wall_rs::{
+    check_dir_exists, listener_setup, print_schedule, sun_timings, time_track::Time,
+    wallpaper_listener,
+};
 use serde::{Deserialize, Serialize};
 use std::{
-    error::Error, fs::create_dir_all, fs::File, io::Read, io::Write, str::FromStr, sync::Arc, process, fs::canonicalize,
+    error::Error, fs::canonicalize, fs::create_dir_all, fs::File, io::Read, io::Write, process,
+    str::FromStr, sync::Arc,
 };
 use structopt::StructOpt;
 use toml;
@@ -157,7 +161,12 @@ fn main() {
                         None => eprintln!("Error: Directory needs to be specified"),
                         Some(dir) => {
                             let dir = dir.as_str();
-                            match sun_timings(dir, lat, args.long.unwrap(), args.elevation.or_else(||Some(0.0)).unwrap()) {
+                            match sun_timings(
+                                dir,
+                                lat,
+                                args.long.unwrap(),
+                                args.elevation.or_else(|| Some(0.0)).unwrap(),
+                            ) {
                                 Err(e) => eprintln!("Error: {}", e),
                                 Ok(s) => {
                                     times = s;
@@ -167,8 +176,7 @@ fn main() {
                         }
                     }
                 }
-            }
-            else if args.long.is_some() {
+            } else if args.long.is_some() {
                 eprintln!("Error: long neds to be specified with lat");
                 process::exit(1);
             }

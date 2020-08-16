@@ -20,7 +20,6 @@
 use crate::{
     errors::{ConfigFileErrors, Errors},
     time_track::Time,
-
 };
 use chrono::{Local, Timelike, Utc};
 use clokwerk::{Scheduler, TimeUnits};
@@ -532,28 +531,23 @@ pub fn sun_timings(
     Ok(times)
 }
 
-fn sun_timings_dir_counts(dir: &str, dir_day: &str, dir_night: &str) -> Result<(u32, u32), Box<dyn Error>> {
-
+fn sun_timings_dir_counts(
+    dir: &str,
+    dir_day: &str,
+    dir_night: &str,
+) -> Result<(u32, u32), Box<dyn Error>> {
     //checking if the directories exist
     if check_dir_exists(dir).is_err() {
         return Err(Errors::FilePathError.into());
-    } else if check_dir_exists(dir_night).is_err()
-        || check_dir_exists(dir_day).is_err()
-    {
+    } else if check_dir_exists(dir_night).is_err() || check_dir_exists(dir_day).is_err() {
         eprintln!("Error: Make sure night and day directories are created within master directory");
         process::exit(1);
     } else {
         //now we know directories exist, so lets get the counts of the night
         //and day directories and send it to sun_timings function to get vector
         //of times based on sunset and sunrise
-        let dir_count_night = WalkDir::new(dir_night)
-            .min_depth(1)
-            .into_iter()
-            .count();
-        let dir_count_day = WalkDir::new(dir_day)
-            .min_depth(1)
-            .into_iter()
-            .count();
+        let dir_count_night = WalkDir::new(dir_night).min_depth(1).into_iter().count();
+        let dir_count_day = WalkDir::new(dir_day).min_depth(1).into_iter().count();
         Ok((dir_count_day as u32, dir_count_night as u32))
     }
 }
