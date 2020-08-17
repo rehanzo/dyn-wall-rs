@@ -40,7 +40,7 @@ pub struct Args {
         short,
         long,
         value_name = "DIRECTORY",
-        help = "Sets the wallpaper based on the current time and changes the wallpaper throughout the day. The wallpaper will change based on the user specified times within the config file or, if custom timings are not set, it will automatically divide the wallpapers into equal parts throughout the day.",
+        help = "Sets the wallpaper based on the current time and changes the wallpaper throughout the day. The wallpaper will change based on the user specified times within the config file or, if custom timings are not set, or if location isn't specified, it will automatically divide the wallpapers into equal parts throughout the day.",
         conflicts_with = "Schedule"
     )]
     pub directory: Option<String>,
@@ -49,7 +49,7 @@ pub struct Args {
         short = "p",
         long = "programs",
         value_name = "COMMAND",
-        help = r#"Sends image as argument to command specified. Use alongside listener or custom. If the command itself contains arguments, wrap in quotation ex. dyn-wall-rs -a /path/to/dir -l "betterlockscreen -u""#
+        help = r#"Sends image as argument to command specified. Use alongside the directory option. If the command itself contains arguments, wrap in quotation ex. dyn-wall-rs -a /path/to/dir -l "betterlockscreen -u""#
     )]
     pub programs: Option<Vec<String>>,
 
