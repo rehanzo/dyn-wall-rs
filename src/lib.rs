@@ -228,16 +228,19 @@ pub fn listener_setup(dir: &str) -> (usize, Result<Time, Errors>, Time, Vec<Time
 
 pub fn print_schedule(dir: &str, min_depth: usize, args: Arc<Args>) -> Result<(), Box<dyn Error>> {
     let mut dir_iter = sorted_dir_iter(dir, min_depth);
-    let mut sched_str = String::from("");
+    let mut sched_str: Vec<String> = vec![];
 
     for time in args.times.to_owned().unwrap().iter() {
         let file = dir_iter
             .next()
             .ok_or(Errors::ConfigFileError(ConfigFileErrors::FileTimeMismatch))??;
         let file = file.file_name();
-        sched_str.push_str(&format!("\nImage: {:?} Time: {}", file, time.twelve_hour()));
+        sched_str.push(format!("Image: {:?} Time: {}", file, time.twelve_hour()));
     }
-    println!("{}", sched_str);
+
+    for line in sched_str.iter() {
+        println!("{}", line);
+    }
 
     Ok(())
 }
@@ -505,12 +508,11 @@ pub fn sun_timings(
     let (sunset, sunrise) = (sunset.with_timezone(&Local), sunrise.with_timezone(&Local));
     let sunset = Time::new((sunset.hour() * 60) + sunset.minute());
     let sunrise = Time::new((sunrise.hour() * 60) + sunrise.minute());
-    let step_time_day = Time::new((sunset.total_mins - sunrise.total_mins) / dir_count_day);
+    let step_time_day = Time::new((sunset.total_mins - sunrise.total_mins) / (dir_count_day - 1));
     let step_time_night =
         Time::new((1440 - (sunset.total_mins - sunrise.total_mins)) / dir_count_night);
     let mut loop_time_night: Time;
     let mut loop_time_day = sunrise.to_owned();
-    //println!("{}", step_time_day.total_mins * dir_count_day + step_time_night.total_mins * dir_count_night);
 
     while loop_time_day <= sunset {
         if loop_time_day >= FULL_DAY {
@@ -540,10 +542,9 @@ fn sun_timings_dir_counts(
 ) -> Result<(u32, u32), Box<dyn Error>> {
     //checking if the directories exist
     if check_dir_exists(dir).is_err() {
-        return Err(Errors::FilePathError.into());
+        Err(Errors::FilePathError.into())
     } else if check_dir_exists(dir_night).is_err() || check_dir_exists(dir_day).is_err() {
-        eprintln!("Error: Make sure night and day directories are created within master directory");
-        process::exit(1);
+        Err("Error: Make sure night and day directories are created within master directory".into())
     } else {
         //now we know directories exist, so lets get the counts of the night
         //and day directories and send it to sun_timings function to get vector

@@ -19,17 +19,15 @@
 */
 use crate::errors::{ConfigFileErrors, Errors};
 use clap::AppSettings;
-use dirs::config_dir;
 use dyn_wall_rs::{
     check_dir_exists,
-    config::{Args, Times},
+    config::Args,
     listener_setup, print_schedule, sun_timings,
     time_track::Time,
     wallpaper_listener,
 };
 use std::{
-    error::Error, fs::canonicalize, fs::create_dir_all, fs::File, io::Read, io::Write, process,
-    str::FromStr, sync::Arc,
+    fs::canonicalize, process, sync::Arc,
 };
 use structopt::StructOpt;
 use walkdir::WalkDir;
@@ -51,87 +49,20 @@ fn main() {
 
     //pulling from config file if cli arguments are not specified, or if just custom timings were
     //specified
-    match config_parse(cli_args_used) {
+    args = match Args::new(cli_args, cli_args_used) {
         Err(e) => {
-            eprint!("{}", e);
+            eprintln!("{}", e);
             process::exit(1);
         }
-        Ok(s) => {
-            //rust doesn't let you assign when deconstructing, so this workaround is required
-            let (temp_times, config_args) = s;
+        Ok(s) => s,
+    };
 
-            args = Args {
-                directory: if cli_args.directory.is_some() {
-                    cli_args.directory
-                } else {
-                    config_args.directory
-                },
-                programs: if cli_args.programs.is_some() {
-                    cli_args.programs
-                } else {
-                    config_args.programs
-                },
-                schedule: cli_args.schedule,
-                backend: if cli_args.backend.is_some() {
-                    cli_args.backend
-                } else {
-                    config_args.backend
-                },
-                lat: if cli_args.lat.is_some() {
-                    cli_args.lat
-                } else {
-                    config_args.lat
-                },
-                long: if cli_args.long.is_some() {
-                    cli_args.long
-                } else {
-                    config_args.long
-                },
-                elevation: if cli_args.elevation.is_some() {
-                    cli_args.elevation
-                } else {
-                    config_args.elevation
-                },
-                times: temp_times,
-            };
-            //the default is all fields none, this is fine becuase if other options are used by
-            //themselves, specific errors come up.
-            if Args::default() == args {
-                eprintln!("Directory not specified");
-            }
-            //if latitude is specified, then longitude and elevation is required as well, so we
-            //just need to check for one of them
-            else if let Some(lat) = args.lat {
-                if args.long.is_none() {
-                    eprintln!("Error: lat needs to be specified with long");
-                    process::exit(1);
-                } else {
-                    let dir = args.directory.to_owned();
-                    match dir {
-                        None => eprintln!("Error: Directory needs to be specified"),
-                        Some(dir) => {
-                            let dir = dir.as_str();
-                            match sun_timings(
-                                dir,
-                                lat,
-                                args.long.unwrap(),
-                                args.elevation.or_else(|| Some(0.0)).unwrap(),
-                            ) {
-                                Err(e) => eprintln!("Error: {}", e),
-                                Ok(s) => {
-                                    args.times = Some(s);
-                                    min_depth = 2;
-                                }
-                            }
-                        }
-                    }
-                }
-            } else if args.long.is_some() {
-                eprintln!("Error: long neds to be specified with lat");
-                process::exit(1);
-            }
-        }
+    //if day and night folders are being used, we need to only look at the second level of files
+    //(files in the folders) which is what changing min_depth to 2 accomplishes
+    if args.lat.is_some() && args.long.is_some() {
+        min_depth = 2;
     }
+    //println!("{:#?}", args);
 
     //handle custom programs specified by user
     if args.programs.is_some() {
@@ -194,112 +125,3 @@ fn main() {
     }
 }
 
-//parse config file
-fn config_parse(cli_args_used: bool) -> Result<(Option<Vec<Time>>, Args), Box<dyn Error>> {
-    let file = File::open(format!(
-        "{}/dyn-wall-rs/config.toml",
-        config_dir()
-            .ok_or_else(|| Errors::ConfigFileError(ConfigFileErrors::NotFound))?
-            .to_str()
-            .unwrap()
-    ))
-    .map_err(|_| Errors::ConfigFileError(ConfigFileErrors::NotFound));
-
-    let file = match file {
-        Ok(s) => Ok(s),
-        Err(e) => {
-            create_config()?;
-            Err(e)
-        }
-    };
-
-    if file.is_err() {
-        return Err("A config file has been created".into());
-    }
-    let mut file = file.unwrap();
-
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)?;
-
-    if !cli_args_used {
-        let mut empty = true;
-        for line in contents.lines() {
-            if !line.contains("#") {
-                empty = false;
-            }
-        }
-        if empty {
-            //provide our own error if empty, rather than less descriptive error from serde
-            return Err(Errors::ConfigFileError(ConfigFileErrors::Empty).into());
-        }
-    }
-
-    let args_string = toml::from_str(contents.as_str());
-    let args_serialized: Args = match args_string {
-        Err(e) => {
-            return Err(Errors::ConfigFileError(ConfigFileErrors::Other(e.to_string())).into());
-        }
-        Ok(s) => s,
-    };
-
-    let times_string = toml::from_str(contents.as_str());
-    let times_serialized: Times = match times_string {
-        Err(e) => {
-            return Err(Errors::ConfigFileError(ConfigFileErrors::Other(e.to_string())).into());
-        }
-        Ok(s) => s,
-    };
-
-    match times_serialized.times {
-        None => Ok((None, args_serialized)),
-        Some(s) => {
-            let times: Result<Vec<_>, _> = s.iter().map(|time| Time::from_str(time)).collect();
-            let times = times?;
-            Ok((Some(times), args_serialized))
-        }
-    }
-}
-
-fn create_config() -> Result<(), Box<dyn Error>> {
-    let config_dir =
-        config_dir().ok_or_else(|| Errors::ConfigFileError(ConfigFileErrors::NotFound))?;
-    create_dir_all(format!("{}/dyn-wall-rs", config_dir.to_str().unwrap()))?;
-    let mut config_file = File::create(format!(
-        "{}/dyn-wall-rs/config.toml",
-        config_dir.to_str().unwrap()
-    ))?;
-    let contents = r#"# Type the times at which you want the wallpaper to change as shown in the example below
-# The times must be in chronological order
-# The number of images and the number of times should be equal
-#
-# ex:
-# times = [
-#   "00:00",
-#   "02:00",
-#   "04:00",
-#   "06:00",
-#   "08:00",
-#   "10:00",
-#   "12:00",
-#   "14:00",
-#   "16:00",
-#   "18:00",
-#   "20:00",
-#   "22:00",
-# ]
-#
-# The times are linked to the files in numerical order. This means that in the example above,
-# 1.png will be your wallpaper at 00:00, 2.png will be your wallpaper at 02:00, etc.
-# The directory would need 12 images for this example to work, since there are 12 times stated
-# Config options are stated below; uncomment them and fill them as you would from the command line.
-#times = []
-#directory = "/path/to/dir"
-#backend = "feh"
-#program = ["echo test1", "echo test2"]
-#lat = 99
-#long = -99
-#elevation = 99"#;
-
-    config_file.write_all(contents.as_bytes())?;
-    Ok(())
-}
