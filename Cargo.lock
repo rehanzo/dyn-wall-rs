@@ -149,7 +149,7 @@ dependencies = [
 
 [[package]]
 name = "dyn-wall-rs"
-version = "2.0.2"
+version = "2.1.0"
 dependencies = [
  "alphanumeric-sort",
  "chrono",

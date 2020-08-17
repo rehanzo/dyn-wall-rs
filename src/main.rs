@@ -20,15 +20,10 @@
 use crate::errors::{ConfigFileErrors, Errors};
 use clap::AppSettings;
 use dyn_wall_rs::{
-    check_dir_exists,
-    config::Args,
-    listener_setup, print_schedule, sun_timings,
-    time_track::Time,
+    check_dir_exists, config::Args, listener_setup, print_schedule, sun_timings, time_track::Time,
     wallpaper_listener,
 };
-use std::{
-    fs::canonicalize, process, sync::Arc,
-};
+use std::{fs::canonicalize, sync::Arc};
 use structopt::StructOpt;
 use walkdir::WalkDir;
 
@@ -42,54 +37,27 @@ fn main() {
     let clap = Args::clap().setting(AppSettings::DeriveDisplayOrder);
     let cli_args = Args::from_clap(&clap.get_matches());
     let cli_args_used = !(Args::default() == cli_args);
-    let mut args: Args;
     //min depth of what files should be looked at, will remain as 1 if not syncing with sun, will
     //change to 2 if syncing with sun to ignore the directory names, focusing just on the files
     let mut min_depth = 1;
 
-    //pulling from config file if cli arguments are not specified, or if just custom timings were
-    //specified
-    args = match Args::new(cli_args, cli_args_used) {
+    match Args::mixed(cli_args, cli_args_used) {
         Err(e) => {
             eprintln!("{}", e);
-            process::exit(1);
         }
-        Ok(s) => s,
-    };
+        Ok(mut args) => {
+            //if day and night folders are being used, we need to only look at the second level of files
+            //(files in the folders) which is what changing min_depth to 2 accomplishes
+            if args.lat.is_some() && args.long.is_some() {
+                min_depth = 2;
+            }
 
-    //if day and night folders are being used, we need to only look at the second level of files
-    //(files in the folders) which is what changing min_depth to 2 accomplishes
-    if args.lat.is_some() && args.long.is_some() {
-        min_depth = 2;
-    }
-    //println!("{:#?}", args);
+            if let Some(dir) = &args.directory {
+                let dir = dir.as_str();
+                let dir_count = WalkDir::new(dir).min_depth(min_depth).into_iter().count();
+                let dir = canonicalize(dir).expect("Failed to canonicalize");
+                let dir = dir.to_str().expect("Couldn't convert to string");
 
-    //handle custom programs specified by user
-    if args.programs.is_some() {
-        if args.directory.is_none() && !args.schedule {
-            eprintln!("Error: The program option is to be used with a specified directory");
-        }
-    }
-
-    //handle custom backend specified by user
-    if args.backend.is_some() {
-        if args.directory.is_none() {
-            eprintln!("Error: The backend option is to be used with a specified directory");
-        }
-    }
-
-    if let Some(dir) = &args.directory {
-        let dir = dir.as_str();
-        let dir_count = WalkDir::new(dir).min_depth(min_depth).into_iter().count();
-        let dir = canonicalize(dir).expect("Failed to canonicalize");
-        let dir = dir.to_str().expect("Couldn't convert to string");
-
-        match check_dir_exists(dir) {
-            Err(e) => eprintln!("{}", e),
-            Ok(_) => {
-                //if the times vector is empty, that means that user didn't specify, so we have to
-                //send "None" to wallpaper listener, which will create a evenly spread timings
-                //vector
                 if args.times.is_none() {
                     if 1440 % dir_count != 0 || dir_count == 0 {
                         eprintln!("{}", Errors::CountCompatError(dir_count));
@@ -108,20 +76,17 @@ fn main() {
                         }
                     }
                 }
+                let args_arc = Arc::new(args);
+                if args_arc.schedule {
+                    if let Err(e) = print_schedule(dir, min_depth, Arc::clone(&args_arc)) {
+                        eprintln!("{}", e);
+                    }
+                } else if let Err(e) =
+                    wallpaper_listener(String::from(dir), Arc::clone(&args_arc), min_depth)
+                {
+                    eprintln!("{}", e);
+                }
             }
         }
-        let args_arc = Arc::new(args);
-        if args_arc.schedule {
-            if let Err(e) = print_schedule(dir, min_depth, Arc::clone(&args_arc)) {
-                eprintln!("{}", e);
-            }
-        } else if let Err(e) =
-            wallpaper_listener(String::from(dir), Arc::clone(&args_arc), min_depth)
-        {
-            eprintln!("{}", e);
-        }
-    } else if args.schedule {
-        eprintln!("Error: The schedule option is to be used alongside a specified directory");
     }
 }
-

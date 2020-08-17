@@ -1,8 +1,14 @@
-use crate::{ Time, Errors, ConfigFileErrors, sun_timings };
-use serde::{Deserialize, Serialize};
-use structopt::StructOpt;
+use crate::{check_dir_exists, sun_timings, ConfigFileErrors, Errors, Time};
 use dirs::config_dir;
-use std::{ fs::create_dir_all, str::FromStr, io::{Read, Write}, error::Error, fs::File };
+use serde::{Deserialize, Serialize};
+use std::{
+    error::Error,
+    fs::create_dir_all,
+    fs::File,
+    io::{Read, Write},
+    str::FromStr,
+};
+use structopt::StructOpt;
 
 #[derive(StructOpt, Default)]
 #[structopt(
@@ -86,7 +92,7 @@ pub struct Times {
 }
 
 impl Args {
-    pub fn new(cli_args: Args, cli_args_used: bool) -> Result<Self, Box<dyn Error>> {
+    pub fn mixed(cli_args: Args, cli_args_used: bool) -> Result<Self, Box<dyn Error>> {
         //rust doesn't let you assign when deconstructing, so this workaround is required
         let (temp_times, config_args) = config_parse(cli_args_used)?;
 
@@ -158,7 +164,17 @@ impl Args {
         } else if args.long.is_some() {
             Err("Error: long neds to be specified with lat".into())
         }
-        else {
+        //handle custom programs specified by user
+        else if args.programs.is_some() && args.directory.is_none() && !args.schedule {
+            Err("Error: The program option is to be used with a specified directory".into())
+        }
+        //handle custom backend specified by user
+        else if args.backend.is_some() && args.directory.is_none() {
+            Err("Error: The backend option is to be used with a specified directory".into())
+        } else if args.schedule && args.directory.is_none() {
+            Err("Error: The schedule option is to be used alongside a specified directory".into())
+        } else {
+            check_dir_exists(&args.directory.to_owned().unwrap())?;
             Ok(args)
         }
     }
