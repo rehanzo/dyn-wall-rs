@@ -213,7 +213,7 @@ fn commands_vec_loader(
     }
 }
 
-pub fn listener_setup(dir: &str) -> (usize, Result<Time, Errors>, Time, Vec<Time>) {
+pub fn auto_time_setup(dir: &str) -> (Result<Time, Errors>, Time) {
     let dir_count = WalkDir::new(dir).into_iter().count() - 1;
     let step_time = if dir_count == 0 {
         Err(Errors::NoFilesFoundError(dir.to_string()))
@@ -221,9 +221,8 @@ pub fn listener_setup(dir: &str) -> (usize, Result<Time, Errors>, Time, Vec<Time
         Ok(Time::new(((24.0 / dir_count as f32) * 60.0) as u32))
     };
     let loop_time = Time::default();
-    let times: Vec<Time> = Vec::new();
 
-    (dir_count, step_time, loop_time, times)
+    (step_time, loop_time)
 }
 
 pub fn print_schedule(dir: &str, min_depth: usize, args: Arc<Args>) -> Result<(), Box<dyn Error>> {
