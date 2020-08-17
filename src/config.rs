@@ -56,8 +56,7 @@ pub struct Args {
     #[structopt(
         short,
         long,
-        value_name = "DIRECTORY",
-        help = "Will present you with a schedule of when your wallpaper will change",
+        help = "Will present you with a schedule of when your wallpaper will change. To be used alongside the directory option",
         //requires = "directory",
         takes_value = false,
     )]
