@@ -20,7 +20,7 @@
 use crate::errors::{ConfigFileErrors, Errors};
 use clap::AppSettings;
 use dyn_wall_rs::{
-    check_dir_exists, config::Args, auto_time_setup, print_schedule, sun_timings, time_track::Time,
+    auto_time_setup, check_dir_exists, config::Args, print_schedule, sun_timings, time_track::Time,
     wallpaper_listener,
 };
 use std::{fs::canonicalize, sync::Arc};

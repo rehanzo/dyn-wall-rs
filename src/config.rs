@@ -201,7 +201,8 @@ impl Args {
 }
 
 //parse config file
-pub fn config_parse(cli_args_used: bool) -> Result<(Option<Vec<Time>>, Args), Box<dyn Error>> {
+type UserInput = (Option<Vec<Time>>, Args);
+pub fn config_parse(cli_args_used: bool) -> Result<UserInput, Box<dyn Error>> {
     let file = File::open(format!(
         "{}/dyn-wall-rs/config.toml",
         config_dir()
@@ -230,7 +231,7 @@ pub fn config_parse(cli_args_used: bool) -> Result<(Option<Vec<Time>>, Args), Bo
     if !cli_args_used {
         let mut empty = true;
         for line in contents.lines() {
-            if !line.contains("#") {
+            if !line.contains('#') {
                 empty = false;
             }
         }
