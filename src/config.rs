@@ -19,7 +19,7 @@
 */
 
 use crate::{check_dir_exists, sun_timings, ConfigFileErrors, Errors, Time};
-use dirs::config_dir;
+use dirs_next::config_dir;
 use serde::{Deserialize, Serialize};
 use std::{
     error::Error,

@@ -20,7 +20,6 @@ chrono = "0.4"
 clokwerk = "0.3.0"
 walkdir = "2"
 alphanumeric-sort = "1.0.13"
-dirs = "2.0.2"
 run_script = "0.6.3"
 unicase = "2.6.0"
 winapi = { version = "0.3.8", features = ["winuser"] }
@@ -29,3 +28,4 @@ clap = "2.33.1"
 serde = { version = "1.0.114", features = ["derive"] }
 toml = "0.5"
 sun-times = "0.1.2"
+dirs-next = "1.0.1"
