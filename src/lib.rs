@@ -507,7 +507,7 @@ pub fn sun_timings(
     let (sunset, sunrise) = (sunset.with_timezone(&Local), sunrise.with_timezone(&Local));
     let sunset = Time::new((sunset.hour() * 60) + sunset.minute());
     let sunrise = Time::new((sunrise.hour() * 60) + sunrise.minute());
-    let step_time_day = Time::new((sunset.total_mins - sunrise.total_mins) / (dir_count_day - 1));
+    let step_time_day = Time::new((sunset.total_mins - sunrise.total_mins) / (dir_count_day));
     let step_time_night =
         Time::new((1440 - (sunset.total_mins - sunrise.total_mins)) / dir_count_night);
     let mut loop_time_night: Time;
@@ -521,7 +521,8 @@ pub fn sun_timings(
         }
         loop_time_day += step_time_day;
     }
-    loop_time_night = sunset.to_owned() + step_time_night;
+    times.pop();
+    loop_time_night = sunset.to_owned();
 
     while loop_time_night < (sunrise + FULL_DAY) {
         if loop_time_night >= FULL_DAY {
