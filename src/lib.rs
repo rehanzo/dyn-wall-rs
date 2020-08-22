@@ -502,6 +502,12 @@ pub fn sun_timings(
     let dir_day = format!("{}/day", dir);
     let dir_day = dir_day.as_str();
     let (dir_count_day, dir_count_night) = sun_timings_dir_counts(dir, dir_day, dir_night)?;
+    if dir_count_day == 0 {
+        return Err(Errors::NoFilesFoundError(String::from(dir_day)).into());
+    }
+    else if dir_count_night == 0 {
+        return Err(Errors::NoFilesFoundError(String::from(dir_night)).into());
+    }
     let mut times: Vec<Time> = vec![];
     let (sunrise, sunset) = sun_times::sun_times(Utc::today(), lat, long, elevation);
     let (sunset, sunrise) = (sunset.with_timezone(&Local), sunrise.with_timezone(&Local));
