@@ -23,7 +23,7 @@ use dyn_wall_rs::{
     auto_time_setup, check_dir_exists, config::Args, print_schedule, sun_timings, time_track::Time,
     wallpaper_listener,
 };
-use std::{fs::canonicalize, sync::Arc};
+use std::fs::canonicalize;
 use structopt::StructOpt;
 use walkdir::WalkDir;
 
@@ -76,13 +76,12 @@ fn main() {
                         }
                     }
                 }
-                let args_arc = Arc::new(args);
-                if args_arc.schedule {
-                    if let Err(e) = print_schedule(dir, min_depth, Arc::clone(&args_arc)) {
+                if args.schedule {
+                    if let Err(e) = print_schedule(dir, min_depth, args) {
                         eprintln!("{}", e);
                     }
                 } else if let Err(e) =
-                    wallpaper_listener(String::from(dir), Arc::clone(&args_arc), min_depth)
+                    wallpaper_listener(String::from(dir), args, min_depth)
                 {
                     eprintln!("{}", e);
                 }

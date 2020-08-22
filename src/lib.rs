@@ -73,7 +73,7 @@ pub fn wallpaper_current_time(
     let mut next_time = times_iter.next().unwrap_or(&FULL_DAY);
     let mut filepath_set: String = String::new();
     let mut last_image = String::new();
-    let first_time = times[0].to_owned();
+    let first_time = times[0];
 
     let mut loop_time = error_checking(times, loop_time, dir_count)?;
 
@@ -82,9 +82,6 @@ pub fn wallpaper_current_time(
         //needed for the case where midnight is passed over in the middle of the stated times
         if loop_time > *next_time {
             loop_time = MIDNIGHT;
-        }
-        if loop_time == FULL_DAY && *next_time == FULL_DAY {
-            return Err(Errors::ConfigFileError(ConfigFileErrors::FileTimeMismatch).into());
         }
 
         let filepath_temp = file.map_err(|_| Errors::FilePathError)?;
@@ -136,14 +133,14 @@ pub fn wallpaper_current_time(
 
 pub fn wallpaper_listener(
     dir: String,
-    args: Arc<Args>,
+    args: Args,
     min_depth: usize,
 ) -> Result<(), Box<dyn Error>> {
     let mut scheduler = Scheduler::new();
     let mut sched_addto = scheduler.every(1.day()).at("0:00");
-    let progs = Arc::new(args.programs.to_owned());
-    let backend = Arc::new(args.backend.to_owned());
-    let times = args.times.to_owned().unwrap();
+    let progs = Arc::new(args.programs);
+    let backend = Arc::new(args.backend);
+    let times = args.times.unwrap();
 
     wallpaper_current_time(
         &dir,
@@ -225,11 +222,16 @@ pub fn auto_time_setup(dir: &str) -> (Result<Time, Errors>, Time) {
     (step_time, loop_time)
 }
 
-pub fn print_schedule(dir: &str, min_depth: usize, args: Arc<Args>) -> Result<(), Box<dyn Error>> {
+pub fn print_schedule(dir: &str, min_depth: usize, args: Args) -> Result<(), Box<dyn Error>> {
     let mut dir_iter = sorted_dir_iter(dir, min_depth);
+    let dir_count = sorted_dir_iter(dir, min_depth).count();
     let mut sched_str: Vec<String> = vec![];
+    let times = args.times.unwrap();
+    let mut times_iter = times.iter();
 
-    for time in args.times.to_owned().unwrap().iter() {
+    error_checking(&times, times_iter.next(), dir_count)?;
+
+    for time in times_iter {
         let file = dir_iter
             .next()
             .ok_or(Errors::ConfigFileError(ConfigFileErrors::FileTimeMismatch))??;
@@ -527,6 +529,8 @@ pub fn sun_timings(
         }
         loop_time_day += step_time_day;
     }
+    //poping off the last one (which will either be the sunset time, or be very close, and replace
+    //it with the sunset time
     times.pop();
     loop_time_night = sunset.to_owned();
 
