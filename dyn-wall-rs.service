@@ -1,0 +1,25 @@
+# Requirements:
+# - dyn-wall-rs in $PATH (eg. /usr/local/bin or ~/.local/bin)
+# - a $HOME/.config/dyn-wall-rs.toml file 
+#
+# Copy to $HOME/.config/systemd/user/dyn-wall-rs.service
+# (create $HOME/.config/systemd/user first if not yet existing)
+#
+# Then run 
+#   systemctl --user daemon-reload
+#   systemctl --user enable dyn-wall-rs.service
+#   systemctl --user start dyn-wall-rs.service
+#
+# Optionally run the below to enable the service to run 
+# when logged out (i.e. to show dynamic wallpapers in the display manager)
+#   loginctl enable-linger
+#
+[Unit]
+Description=dyn-wall-rs service
+
+[Service]
+ExecStart=dyn-wall-rs
+PrivateTmp=1
+
+[Install]
+WantedBy=default.target
