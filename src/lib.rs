@@ -557,6 +557,11 @@ pub fn sun_timings(
         }
         loop_time_night += step_time_night;
     }
+
+    if i32::abs(sunrise.total_mins as i32 - times[times.len() - 1].total_mins as i32) < step_time_night.total_mins as i32 {
+        times.pop();
+    }
+    println!("{:#?}", times);
     Ok(times)
 }
 
