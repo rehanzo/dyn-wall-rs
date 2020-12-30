@@ -558,10 +558,14 @@ pub fn sun_timings(
         loop_time_night += step_time_night;
     }
 
+    //Because of the rounding that takes place when determining step time, it may throw off the
+    //timing, possibly making it so that an extra time slips through
+    //when this takes place, it would mean that the difference between the last time and the first
+    //time (sunrise) is less than step_time_night, so in this case we would simply pop off the
+    //extra time segment
     if i32::abs(sunrise.total_mins as i32 - times[times.len() - 1].total_mins as i32) < step_time_night.total_mins as i32 {
         times.pop();
     }
-    println!("{:#?}", times);
     Ok(times)
 }
 
