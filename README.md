@@ -92,7 +92,7 @@ There are a few different ways to use dyn-wall-rs from the command line using th
     Longitude of current location. Requires the use of the `lat` option as well.
     
   * **--elevation \<ELEVATION>**\
-    Elevation of current location. Optional. Use alongside `long` and `lat` options for a more accurate sunset and sunrise reading.
+    Elevation of current location. Optional. Use alongside `long` and `lat` options for a more accurate sunset and sunrise reading. Expressed in meters above sea level.
 
 Once you figure out which options you want to use and test it to make sure its working how you want it to, have the command autostart on boot.
 
