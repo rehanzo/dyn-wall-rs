@@ -40,7 +40,7 @@ pub struct Args {
         short,
         long,
         value_name = "DIRECTORY",
-        help = "Sets the wallpaper based on the current time and changes the wallpaper throughout the day. The wallpaper will change based on the user specified times within the config file or, if custom timings are not set, or if location isn't specified, it will automatically divide the wallpapers into equal parts throughout the day.",
+        help = "Sets the wallpaper based on the current time and changes the wallpaper throughout the day. The wallpaper will change based on the user specified times within the config file, if custom timings are not set, or if location isn't specified, it will automatically divide the wallpapers into equal parts throughout the day.",
         conflicts_with = "Schedule"
     )]
     pub directory: Option<String>,
@@ -56,7 +56,7 @@ pub struct Args {
     #[structopt(
         short,
         long,
-        help = "Will present you with a schedule of when your wallpaper will change. To be used alongside the directory option",
+        help = "Prints change schedule. Use alongside directory option",
         //requires = "directory",
         takes_value = false,
     )]
@@ -92,7 +92,7 @@ pub struct Args {
     #[structopt(
         long,
         value_name = "ELEVATION",
-        help = "Elevation of current location. Optional, but allows for a more accurate calculation of sunrise and sunset times",
+        help = "Elevation of current location. Optional. expressed in meters above sea level.",
         //requires_all = &["lat", "long"],
         allow_hyphen_values(true)
     )]
