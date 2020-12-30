@@ -30,6 +30,9 @@ use walkdir::{IntoIter, WalkDir};
 use run_script::ScriptOptions;
 use unicase::UniCase;
 
+#[cfg(not(windows))]
+use std::env::consts::ARCH;
+
 //crates used to change windows wallpaper
 #[cfg(windows)]
 use std::ffi::OsStr;
@@ -350,7 +353,6 @@ fn de_command_spawn(
 ) -> Result<(), Box<dyn Error>> {
     let backend = backend.as_deref();
     let gnome = vec![
-        UniCase::new("pantheon"),
         UniCase::new("gnome"),
         UniCase::new("gnome-xorg"),
         UniCase::new("ubuntu"),
@@ -358,6 +360,7 @@ fn de_command_spawn(
         UniCase::new("pop"),
         UniCase::new("ubuntu:gnome"),
     ];
+    let pantheon = UniCase::new("pantheon");
     let mate = UniCase::new("mate");
     let kde = vec![
         UniCase::new("plasma"),
@@ -382,13 +385,21 @@ fn de_command_spawn(
     let mut feh_handle = Command::new("feh");
     let feh_handle = feh_handle.arg("--bg-scale").arg(filepath_set);
 
-    //Pantheon, Gnome, Ubuntu, Deepin, Pop
+    //Gnome, Ubuntu, Deepin, Pop
     let mut gnome_handle = Command::new("gsettings");
     let gnome_handle = gnome_handle
         .arg("set")
         .arg("org.gnome.desktop.background")
         .arg("picture-uri")
         .arg(format!("'file://{}'", filepath_set));
+
+    //Pantheon
+    let mut multiarch_dir = String::from("/usr/lib/");
+    multiarch_dir.push_str(ARCH);
+    multiarch_dir.push_str("-linux-gnu/");
+    let mut pantheon_handle = Command::new(multiarch_dir + "io.elementary.contract.set-wallpaper");
+    let pantheon_handle = pantheon_handle
+        .arg(format!("{}", filepath_set));
 
     //kde
     let kde_script_beg = r#"
@@ -449,6 +460,10 @@ qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "
         lxde_handle
             .spawn()
             .map_err(|_| Errors::ProgramRunError(String::from("LXDE Wallpaper Adjuster")))?;
+    } else if pantheon == curr_de {
+        pantheon_handle
+            .spawn()
+            .map_err(|_| Errors::ProgramRunError(String::from("Pantheon Wallpaper Adjuster")))?;
     } else if mate == curr_de {
         mate_handle
             .spawn()
