@@ -19,8 +19,8 @@ Description=dyn-wall-rs service
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/dyn-wall-rs
-ExecStartPost=/usr/local/bin/dyn-wall-rs --schedule
+ExecStart=/usr/bin/dyn-wall-rs
+ExecStartPost=/usr/bin/dyn-wall-rs --schedule
 
 PrivateTmp=1
 
