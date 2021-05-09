@@ -7,5 +7,5 @@ times = [
     "20:00"
 ]
 directory = "/home/popeye/pics\ of\ spinach"
-program = "betterlockscreen -u"
+programs = ["betterlockscreen -u", "wal -i"]
 backend = "feh"

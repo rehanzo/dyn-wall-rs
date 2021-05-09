@@ -68,8 +68,8 @@ There are a few different ways to use dyn-wall-rs from the command line using th
     For example, if I have 12 wallpapers in my wallpaper directory, this option would change the wallpaper every 2 hours (24/12 = 2). Make sure the number of wallpapers in the directory can divide evenly into 1440 (number of minutes in a day). If it doesn't divide evenly into 1440, you may want to place custom timings in the configuration file.\
     If timings are specified through the configuration file, then the wallpapers will change based on those timings. More information on custom timings can be found within the automatically created config file.
 
-  * **-p, --program \<COMMAND>**\
-    Will send the wallpaper as an argument to the specified program when the wallpaper is set to change. Using this feature, you can have your lockscreen change alongside your wallpaper. If the command includes arguments, wrap it in quotation marks.\
+  * **-p, --programs \<COMMAND>**\
+    Will send the wallpaper as an argument to the specified program(s) when the wallpaper is set to change. Using this feature, you can have your lockscreen change alongside your wallpaper. If the command includes arguments, wrap it in quotation marks.\
     ex. `dyn-wall-rs -d /path/to/dir/ -p "betterlockscreen -u"`
     
     To be able to send arguments *after* the wallpaper argument, use `!WALL` to specify where the wallpaper argument is to be placed, and add the rest of the arguments. `!WALL` will be explanded to the path of the wallpaper to be set at the current time.\
