@@ -189,9 +189,9 @@ fn commands_vec_loader(
     progs: Arc<Option<Vec<String>>>,
     commands_vec: &mut Vec<Command>,
 ) {
-    let mut wall_sent = false;
     if let Some(prog_vec) = progs.as_deref() {
         for prog_str in prog_vec.iter() {
+            let mut wall_sent = false;
             let mut prog_split = prog_str.split_whitespace();
             let mut curr_command = Command::new(prog_split.next().unwrap());
             for word in prog_split {
@@ -206,7 +206,6 @@ fn commands_vec_loader(
             //if the filepath has been placed previously, this ensures that we dont place it again at the end
             if wall_sent == false {
                 curr_command.arg(filepath_set);
-                wall_sent = true;
             }
             commands_vec.push(curr_command);
         }
