@@ -428,15 +428,12 @@ qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "
         .arg("picture-uri")
         .arg(format!("'file://{}'", filepath_set));
 
-    let xfce_script_beg = r#"xfconf-query -c xfce4-desktop \
--p /backdrop/screen0/monitor0/workspace0/last-image \
--s ""#;
-    let xfce_script_alt_beg = r#"xfconf-query -c xfce4-desktop \
--p /backdrop/screen0/monitor0/workspace0/last-image \
--s ""#;
-    let xfce_script_end = r#"""#;
+    //let xfce_script_beg = r#"xfconf-query -c xfce4-desktop \
+//-p /backdrop/screen0/monitor0/workspace0/last-image \
+//-s ""#;
+    let xfce_script_beg = "xfconf-query -c xfce4-desktop -l | grep last-image | while read path; do xfconf-query -c xfce4-desktop -p $path -s ";
+    let xfce_script_end = r#"; done"#;
     let xfce_script = format!("{}{}{}", xfce_script_beg, filepath_set, xfce_script_end);
-    let xfce_script_alt = format!("{}{}{}", xfce_script_alt_beg, filepath_set, xfce_script_end);
 
     //to avoid uninitialized variable error
     //safe because its not used unless custom backend specified
@@ -472,8 +469,6 @@ qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "
             .map_err(|_| Errors::ProgramRunError(String::from("KDE Wallpaper Adjuster")))?;
     } else if xfce.contains(&curr_de) {
         run_script::run(xfce_script.as_str(), &vec![], &ScriptOptions::new())
-            .map_err(|_| Errors::ProgramRunError(String::from("XFCE Wallpaper Adjuster")))?;
-        run_script::run(xfce_script_alt.as_str(), &vec![], &ScriptOptions::new())
             .map_err(|_| Errors::ProgramRunError(String::from("XFCE Wallpaper Adjuster")))?;
     } else if !cust_backend || curr_de == UniCase::new("feh") {
         feh_handle
