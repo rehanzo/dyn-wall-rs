@@ -76,7 +76,7 @@ There are a few different ways to use dyn-wall-rs from the command line using th
     ex. `dyn-wall-rs -d /path/to/dir -p "betterlockscreen -u !WALL -b 1"`
     
     You are also able to specifiy multiple programs to be synced with the wallpaper. Simply just insert the program names one after the other
-    ex. `dyn-wall-rs -d /path/to/dir -p "betterlockscreen -u" "echo"
+    ex. `dyn-wall-rs -d /path/to/dir -p "betterlockscreen -u" "echo"`
 
   * **-s, --schedule**\
     Prints out a schedule of the times at which the wallpaper will change depending on your settings. Use alongside the `--directory` option.\
