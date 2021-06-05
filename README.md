@@ -101,6 +101,9 @@ dyn-wall-rs can also be configured through a config file. When you run the progr
 
 Through this config file, you can use the same configuration options as through the command line (except the `schedule` option), as well as use your own custom timings. If you would like to configure certain parameters from the config file, and others from the command line, you are able to do so. More details can be found in the automatically created config file.
 
+### Systemd Service
+On systemd systems, a systemd service such as [this](https://github.com/RAR27/dyn-wall-rs/blob/master/dyn-wall-rs.service) one can be used. If installing from the AUR, this service file should already be in the right location. If you haven't installed from the AUR, you can download and move the service file to `/usr/lib/systemd/system/dyn-wall-rs.service`. The service can be enabled with the command `systemctl --user enable dyn-wall-rs.service`. If you are running the program with command line arguments, then the service file can be edited to include those arguments.
+
 ### Syncing to the sun
 In order to sync the changing of wallpapers according to the sunset and sunrise timings, create directories within the master directory named `night` and `day`. This will cycle through the wallpapers in the `day` directory if the current time is before the sunset time, and will cycle through the wallpapers in the `night` directory. After the directories are created and the wallpapers are placed in them, specify your latitude, longitude, and elevation (optional), and let the program do its work! You can find your coordinates through [this](https://www.mapcoordinates.net/en) website.
 
