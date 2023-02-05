@@ -98,6 +98,13 @@ pub struct Args {
     )]
     pub elevation: Option<f64>,
 
+    #[structopt(
+        short = "i",
+        value_name = "DAYS",
+        help = "Days between wallpaper changes"
+    )]
+    pub days: Option<u32>,
+
     #[structopt(skip)]
     #[serde(skip)]
     pub times: Option<Vec<Time>>,
@@ -146,6 +153,11 @@ impl Args {
                 cli_args.elevation
             } else {
                 config_args.elevation
+            },
+            days: if cli_args.days.is_some() {
+                cli_args.days
+            } else {
+                config_args.days
             },
             times: temp_times,
         };

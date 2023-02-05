@@ -20,8 +20,8 @@
 use crate::errors::{ConfigFileErrors, Errors};
 use clap::AppSettings;
 use dyn_wall_rs::{
-    auto_time_setup, check_dir_exists, config::Args, print_schedule, sun_timings, time_track::Time,
-    wallpaper_listener,
+    auto_time_setup, check_dir_exists, config::Args, create_data_file, print_schedule, sun_timings,
+    time_track::Time, update_wallpaper_days, wallpaper_listener,
 };
 use std::fs::canonicalize;
 use structopt::StructOpt;
@@ -58,7 +58,13 @@ fn main() {
                 let dir = canonicalize(dir).expect("Failed to canonicalize");
                 let dir = dir.to_str().expect("Couldn't convert to string");
 
-                if args.times.is_none() {
+                if args.days.is_some() {
+                    let times: Vec<Time> = vec![Time::default()];
+                    args.times = Some(times);
+                    if create_data_file().unwrap() {
+                        update_wallpaper_days(dir).unwrap();
+                    }
+                } else if args.times.is_none() {
                     if 1440 % dir_count != 0 || dir_count == 0 {
                         eprintln!("{}", Errors::CountCompatError(dir_count));
                     } else {
@@ -80,9 +86,7 @@ fn main() {
                     if let Err(e) = print_schedule(dir, min_depth, args) {
                         eprintln!("{}", e);
                     }
-                } else if let Err(e) =
-                    wallpaper_listener(String::from(dir), args, min_depth)
-                {
+                } else if let Err(e) = wallpaper_listener(String::from(dir), args, min_depth) {
                     eprintln!("{}", e);
                 }
             }

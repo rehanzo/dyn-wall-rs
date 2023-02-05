@@ -24,8 +24,16 @@ use crate::{
 };
 use chrono::{Local, Timelike, Utc};
 use clokwerk::{Scheduler, TimeUnits};
+use dirs_next::data_dir;
 use std::{env, error::Error, process, process::Command, sync::Arc, thread::sleep, time::Duration};
-use walkdir::{IntoIter, WalkDir};
+use std::{
+    fs,
+    fs::create_dir_all,
+    fs::File,
+    fs::OpenOptions,
+    io::{Read, Write},
+};
+use walkdir::{DirEntry, WalkDir};
 
 use run_script::ScriptOptions;
 use unicase::UniCase;
@@ -78,7 +86,7 @@ pub fn wallpaper_current_time(
     let mut last_image = String::new();
     let first_time = times[0];
 
-    let mut loop_time = error_checking(times, loop_time, dir_count)?;
+    let mut loop_time = error_checking(times, loop_time, dir_count, None)?;
 
     //this loop is to find where the current time lays, and adjust the wallpaper based on that
     for file in dir_iter {
@@ -134,49 +142,68 @@ pub fn wallpaper_current_time(
     Ok(())
 }
 
-pub fn wallpaper_listener(
-    dir: String,
-    args: Args,
-    min_depth: usize,
-) -> Result<(), Box<dyn Error>> {
+pub fn wallpaper_listener(dir: String, args: Args, min_depth: usize) -> Result<(), Box<dyn Error>> {
     let mut scheduler = Scheduler::new();
     let mut sched_addto = scheduler.every(1.day()).at("0:00");
     let progs = Arc::new(args.programs);
     let backend = Arc::new(args.backend);
     let times = args.times.unwrap();
+    let days = args.days;
+    let days_val = days.unwrap_or(1);
 
-    wallpaper_current_time(
-        &dir,
-        Arc::clone(&progs),
-        &times,
-        Arc::clone(&backend),
-        min_depth,
-    )?;
-
-    for time in &times {
-        let time_fmt = format!("{:02}:{:02}", time.hours, time.mins);
-        sched_addto = sched_addto.and_every(1.day()).at(time_fmt.as_str());
-    }
-
-    let sched_closure = move || {
-        let result = wallpaper_current_time(
+    if days.is_none() {
+        wallpaper_current_time(
             &dir,
             Arc::clone(&progs),
             &times,
             Arc::clone(&backend),
             min_depth,
-        );
+        )?;
 
-        match result {
-            Ok(s) => s,
-            Err(e) => {
-                eprintln!("{}", e);
-                process::exit(1);
-            }
+        for time in &times {
+            let time_fmt = format!("{:02}:{:02}", time.hours, time.mins);
+            sched_addto = sched_addto.and_every(1.day()).at(time_fmt.as_str());
         }
-    };
 
-    sched_addto.run(sched_closure);
+        let sched_closure = move || {
+            let result = wallpaper_current_time(
+                &dir,
+                Arc::clone(&progs),
+                &times,
+                Arc::clone(&backend),
+                min_depth,
+            );
+
+            match result {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("{}", e);
+                    process::exit(1);
+                }
+            }
+        };
+        sched_addto.run(sched_closure);
+    } else {
+        sched_addto = sched_addto.and_every(days_val.day()).at("00:00");
+        let curr_fp = file_data_load()?.into_iter().last().unwrap();
+        set_wallpaper(&curr_fp, Arc::clone(&progs), Arc::clone(&backend))?;
+
+        let sched_closure = move || {
+            // append new chosen file name to the file
+            // setting function will look at file name at bottom
+            // and set accordingly.
+            let filepath_set = update_wallpaper_days(&dir);
+            let filepath_set = match filepath_set {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("{}", e);
+                    process::exit(1);
+                }
+            };
+            set_wallpaper(&filepath_set, Arc::clone(&progs), Arc::clone(&backend)).unwrap();
+        };
+        sched_addto.run(sched_closure);
+    }
 
     loop {
         scheduler.run_pending();
@@ -231,7 +258,7 @@ pub fn print_schedule(dir: &str, min_depth: usize, args: Args) -> Result<(), Box
     let times = args.times.unwrap();
     let mut times_iter = times.iter();
 
-    error_checking(&times, times_iter.next(), dir_count)?;
+    error_checking(&times, times_iter.next(), dir_count, args.days)?;
 
     for time in times_iter {
         let file = dir_iter
@@ -248,7 +275,7 @@ pub fn print_schedule(dir: &str, min_depth: usize, args: Args) -> Result<(), Box
     Ok(())
 }
 
-pub fn sorted_dir_iter(dir: &str, min_depth: usize) -> IntoIter {
+pub fn sorted_dir_iter(dir: &str, min_depth: usize) -> walkdir::IntoIter {
     WalkDir::new(dir)
         .sort_by(|a, b| {
             alphanumeric_sort::compare_str(
@@ -264,6 +291,7 @@ fn error_checking(
     times: &[Time],
     loop_time: Option<&Time>,
     dir_count: usize,
+    days: Option<u32>,
 ) -> Result<Time, Box<dyn Error>> {
     let times_iter_err = times.iter();
     let start_range = times
@@ -304,7 +332,7 @@ fn error_checking(
         }
         checked.push(*time);
     }
-    if times.len() != dir_count {
+    if times.len() != dir_count && days.is_none() {
         return Err(Errors::ConfigFileError(ConfigFileErrors::FileTimeMismatch).into());
     }
 
@@ -397,8 +425,7 @@ fn de_command_spawn(
     multiarch_dir.push_str(ARCH);
     multiarch_dir.push_str("-linux-gnu/");
     let mut pantheon_handle = Command::new(multiarch_dir + "io.elementary.contract.set-wallpaper");
-    let pantheon_handle = pantheon_handle
-        .arg(format!("{}", filepath_set));
+    let pantheon_handle = pantheon_handle.arg(format!("{}", filepath_set));
 
     //kde
     let kde_script_beg = r#"
@@ -429,8 +456,8 @@ qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "
         .arg(format!("'file://{}'", filepath_set));
 
     //let xfce_script_beg = r#"xfconf-query -c xfce4-desktop \
-//-p /backdrop/screen0/monitor0/workspace0/last-image \
-//-s ""#;
+    //-p /backdrop/screen0/monitor0/workspace0/last-image \
+    //-s ""#;
     let xfce_script_beg = "xfconf-query -c xfce4-desktop -l | grep last-image | while read path; do xfconf-query -c xfce4-desktop -p $path -s ";
     let xfce_script_end = r#"; done"#;
     let xfce_script = format!("{}{}{}", xfce_script_beg, filepath_set, xfce_script_end);
@@ -515,8 +542,7 @@ pub fn sun_timings(
     let (dir_count_day, dir_count_night) = sun_timings_dir_counts(dir, dir_day, dir_night)?;
     if dir_count_day == 0 {
         return Err(Errors::NoFilesFoundError(String::from(dir_day)).into());
-    }
-    else if dir_count_night == 0 {
+    } else if dir_count_night == 0 {
         return Err(Errors::NoFilesFoundError(String::from(dir_night)).into());
     }
     let mut times: Vec<Time> = vec![];
@@ -557,7 +583,9 @@ pub fn sun_timings(
     //when this takes place, it would mean that the difference between the last time and the first
     //time (sunrise) is less than step_time_night, so in this case we would simply pop off the
     //extra time segment
-    if i32::abs(sunrise.total_mins as i32 - times[times.len() - 1].total_mins as i32) < step_time_night.total_mins as i32 {
+    if i32::abs(sunrise.total_mins as i32 - times[times.len() - 1].total_mins as i32)
+        < step_time_night.total_mins as i32
+    {
         times.pop();
     }
     Ok(times)
@@ -590,4 +618,123 @@ pub fn check_dir_exists(dir: &str) -> Result<(), Errors> {
     } else {
         Ok(())
     }
+}
+
+pub fn file_data_load() -> Result<Vec<String>, Box<dyn Error>> {
+    let data_dir = data_dir().unwrap();
+    create_dir_all(format!("{}/dyn-wall-rs", data_dir.to_str().unwrap()))?;
+    let data_file = File::open(format!(
+        "{}/dyn-wall-rs/visited",
+        data_dir.to_str().unwrap()
+    ));
+
+    let mut data_file = data_file?;
+    let mut contents: String = Default::default();
+    data_file.read_to_string(&mut contents)?;
+    contents = contents.trim().to_string();
+    let splitted = contents.split("\n");
+    let splitted = splitted.map(|x| x.to_string());
+    let splitted: Vec<String> = splitted.collect();
+    Ok(splitted)
+}
+
+pub fn file_data_save(contents: &str) -> Result<(), Box<dyn Error>> {
+    let data_dir = data_dir().unwrap();
+    let data_dir = data_dir.to_str().unwrap();
+    println!("{}", data_dir);
+    let filepath = format!("{}/dyn-wall-rs/visited", data_dir);
+    let mut data_file = OpenOptions::new().write(true).append(true).open(filepath)?;
+    let newlined = contents.to_string() + "\n";
+
+    data_file.write_all(newlined.as_bytes())?;
+
+    Ok(())
+}
+
+pub fn create_data_file() -> Result<bool, Box<dyn Error>> {
+    let mut ret: bool = false;
+    let data_dir = data_dir().unwrap();
+    create_dir_all(format!("{}/dyn-wall-rs", data_dir.to_str().unwrap()))?;
+    let mut data_file = File::open(format!(
+        "{}/dyn-wall-rs/visited",
+        data_dir.to_str().unwrap()
+    ));
+    if data_file.is_err() {
+        ret = true;
+        data_file = File::create(format!(
+            "{}/dyn-wall-rs/visited",
+            data_dir.to_str().unwrap()
+        ));
+        let mut data_file = data_file?;
+        let contents = "";
+
+        data_file.write_all(contents.as_bytes())?;
+    }
+    Ok(ret)
+}
+
+pub fn reset_file() -> Result<(), Box<dyn Error>> {
+    let data_dir = data_dir().unwrap();
+    let filepath = format!("{}/dyn-wall-rs/visited", data_dir.to_str().unwrap());
+    fs::remove_file(filepath)?;
+    create_data_file()?;
+    Ok(())
+}
+
+pub fn set_wallpaper(
+    filepath_set: &str,
+    progs: Arc<Option<Vec<String>>>,
+    backend: Arc<Option<String>>,
+) -> Result<(), Box<dyn Error>> {
+    let mut commands_vec: Vec<Command> = vec![];
+
+    //this is to send the file as an argument to the user specified program, if one was specified
+    commands_vec_loader(&filepath_set, Arc::clone(&progs), &mut commands_vec);
+
+    //this is for the edge case where the current time is after the last time specified for the day, but before the first one specified for the day
+    //in that case, the previous loop would push nothing to filepath_set, and so nothing would be sent to feh
+    //what we want in this situation is for the file that is associated with the last time of the day to be sent as an argument to feh,
+    //and to the user specified program
+    de_command_spawn(&filepath_set, backend)?;
+
+    if let Some(progs) = progs.as_deref() {
+        let mut prog_iter = progs.iter();
+        for curr_command in commands_vec.iter_mut() {
+            curr_command
+                .spawn()
+                .map_err(|_| Errors::ProgramRunError(String::from(prog_iter.next().unwrap())))?;
+            println!(
+                "The image {} has been sent as an argument to the specified program",
+                filepath_set
+            );
+        }
+    }
+    Ok(())
+}
+
+pub fn update_wallpaper_days(dir: &str) -> Result<String, Box<dyn Error>> {
+    let dir_iter = sorted_dir_iter(dir, 1);
+
+    let mut filepath_set: String = String::new();
+    let old = file_data_load()?;
+
+    for file in dir_iter {
+        let filepath = file?;
+        let filepath = filepath.path().to_str().unwrap();
+        let filepath = filepath.to_string();
+        if !old.contains(&filepath) {
+            filepath_set.push_str(&filepath);
+            break;
+        }
+    }
+
+    // if we didn't encounter file that hasn't been visited,
+    // this means all have been visited, and so we need to reset
+    if filepath_set.is_empty() {
+        reset_file()?;
+        let temp = sorted_dir_iter(dir, 1).next().unwrap();
+        filepath_set.push_str(temp?.path().to_str().unwrap());
+    }
+    file_data_save(&filepath_set)?;
+    Ok(filepath_set)
 }
