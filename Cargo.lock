@@ -196,6 +196,7 @@ dependencies = [
  "clap",
  "clokwerk",
  "dirs-next",
+ "rand",
  "run_script",
  "serde",
  "structopt",

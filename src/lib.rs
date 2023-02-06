@@ -35,6 +35,8 @@ use std::{
 };
 use walkdir::{DirEntry, WalkDir};
 
+use rand::seq::SliceRandom;
+use rand::thread_rng;
 use run_script::ScriptOptions;
 use unicase::UniCase;
 
@@ -285,6 +287,13 @@ pub fn sorted_dir_iter(dir: &str, min_depth: usize) -> walkdir::IntoIter {
         })
         .min_depth(min_depth)
         .into_iter()
+}
+
+pub fn shuffled_dir_vec(dir: &str, min_depth: usize) -> Vec<Result<DirEntry, walkdir::Error>> {
+    let mut rng = thread_rng();
+    let mut dir_vector: Vec<_> = WalkDir::new(dir).min_depth(min_depth).into_iter().collect();
+    dir_vector.shuffle(&mut rng);
+    dir_vector
 }
 
 fn error_checking(
@@ -713,7 +722,8 @@ pub fn set_wallpaper(
 }
 
 pub fn update_wallpaper_days(dir: &str) -> Result<String, Box<dyn Error>> {
-    let dir_iter = sorted_dir_iter(dir, 1);
+    let dir_vector = shuffled_dir_vec(dir, 1);
+    let dir_iter = dir_vector.into_iter();
 
     let mut filepath_set: String = String::new();
     let old = file_data_load()?;
