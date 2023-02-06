@@ -23,6 +23,7 @@ use dyn_wall_rs::{
     auto_time_setup, check_dir_exists, config::Args, create_data_file, print_schedule, sun_timings,
     time_track::Time, update_wallpaper_days, wallpaper_listener,
 };
+use std::env;
 use std::fs::canonicalize;
 use structopt::StructOpt;
 use walkdir::WalkDir;
@@ -61,7 +62,7 @@ fn main() {
                 if args.days.is_some() {
                     let times: Vec<Time> = vec![Time::default()];
                     args.times = Some(times);
-                    if create_data_file().unwrap() {
+                    if create_data_file().unwrap() || env::var("DYN_TEST").is_ok() {
                         update_wallpaper_days(dir).unwrap();
                     }
                 } else if args.times.is_none() {
