@@ -152,6 +152,9 @@ pub fn wallpaper_listener(dir: String, args: Args, min_depth: usize) -> Result<(
     let times = args.times.unwrap();
     let days = args.days;
     let days_val = days.unwrap_or(1);
+    if env::var("DYN_TEST").is_ok() {
+        println!("DAYS = {}", days_val);
+    }
 
     if days.is_none() {
         wallpaper_current_time(
