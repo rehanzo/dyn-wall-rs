@@ -146,7 +146,7 @@ pub fn wallpaper_current_time(
 
 pub fn wallpaper_listener(dir: String, args: Args, min_depth: usize) -> Result<(), Box<dyn Error>> {
     let mut scheduler = Scheduler::new();
-    let mut sched_addto = scheduler.every(1.day()).at("0:00");
+    let mut sched_addto: &mut clokwerk::Job;
     let progs = Arc::new(args.programs);
     let backend = Arc::new(args.backend);
     let times = args.times.unwrap();
@@ -157,6 +157,7 @@ pub fn wallpaper_listener(dir: String, args: Args, min_depth: usize) -> Result<(
     }
 
     if days.is_none() {
+        sched_addto = scheduler.every(1.day()).at("0:00");
         wallpaper_current_time(
             &dir,
             Arc::clone(&progs),
@@ -189,7 +190,7 @@ pub fn wallpaper_listener(dir: String, args: Args, min_depth: usize) -> Result<(
         };
         sched_addto.run(sched_closure);
     } else {
-        sched_addto = sched_addto.and_every(days_val.day()).at("00:00");
+        sched_addto = scheduler.every(days_val.day()).at("00:00");
         let curr_fp = file_data_load()?.into_iter().last().unwrap();
         set_wallpaper(&curr_fp, Arc::clone(&progs), Arc::clone(&backend))?;
 
