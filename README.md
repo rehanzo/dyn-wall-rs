@@ -107,6 +107,12 @@ On systemd systems, a systemd service such as [this](https://github.com/RAR27/dy
 ### Syncing to the sun
 In order to sync the changing of wallpapers according to the sunset and sunrise timings, create directories within the master directory named `night` and `day`. This will cycle through the wallpapers in the `day` directory if the current time is before the sunset time, and will cycle through the wallpapers in the `night` directory. After the directories are created and the wallpapers are placed in them, specify your latitude, longitude, and elevation (optional), and let the program do its work! You can find your coordinates through [this](https://www.mapcoordinates.net/en) website.
 
+### Sway
+To use with sway, download the `swaybg-dyn.sh` script, and supply a path to it using the `backend` option.
+```bash
+dyn-wall-rs -d ~/Pictures/backgrounds/ -b ~/Scripts/swaybg-dyn.sh
+```
+
 ## Supported Desktop Environments
   * Windows
   * Gnome
@@ -118,6 +124,7 @@ In order to sync the changing of wallpapers according to the sunset and sunrise 
   * LXDE
   * XFCE
   * Window Managers that can have their wallpaper set using Feh
+  * Sway
 
 [RELEASES]: https://github.com/RAR27/dyn-wall-rs/releases
 [DEMO]: https://raw.githubusercontent.com/RAR27/dyn-wall-rs/master/demo.gif 
