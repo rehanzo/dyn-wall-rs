@@ -105,6 +105,15 @@ pub struct Args {
     )]
     pub days: Option<u32>,
 
+    #[structopt(
+        short = "c",
+        long = "current",
+        help = "Returns currently set wallpaper filepath",
+        takes_value = false
+    )]
+    #[serde(skip)]
+    pub ret_curr_wp: bool,
+
     #[structopt(skip)]
     #[serde(skip)]
     pub times: Option<Vec<Time>>,
@@ -159,6 +168,7 @@ impl Args {
             } else {
                 config_args.days
             },
+            ret_curr_wp: cli_args.ret_curr_wp,
             times: temp_times,
         };
         //the default is all fields none, this is fine becuase if other options are used by
@@ -205,7 +215,9 @@ impl Args {
         } else if args.schedule && args.directory.is_none() {
             Err("Error: The schedule option is to be used alongside a specified directory".into())
         } else {
-            check_dir_exists(&args.directory.to_owned().unwrap())?;
+            if !args.ret_curr_wp {
+                check_dir_exists(&args.directory.to_owned().unwrap())?;
+            }
             Ok(args)
         }
     }

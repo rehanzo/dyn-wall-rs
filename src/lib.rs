@@ -752,3 +752,7 @@ pub fn update_wallpaper_days(dir: &str) -> Result<String, Box<dyn Error>> {
     file_data_save(&filepath_set)?;
     Ok(filepath_set)
 }
+
+pub fn get_curr_back() -> Result<String, Box<dyn Error>> {
+    Ok(file_data_load()?.into_iter().last().unwrap())
+}
