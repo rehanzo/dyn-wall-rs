@@ -20,7 +20,7 @@ chrono = "0.4.23"
 clokwerk = "0.4.0"
 walkdir = "2.3.2"
 alphanumeric-sort = "1.4.4"
-run_script = "0.8.0"
+run_script = "0.10.0"
 unicase = "2.6.0"
 winapi = { version = "0.3.9", features = ["winuser"] }
 structopt = "0.3.26"
