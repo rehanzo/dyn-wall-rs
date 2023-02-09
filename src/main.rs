@@ -18,14 +18,13 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 use crate::errors::{ConfigFileErrors, Errors};
-use clap::AppSettings;
+use clap::Parser;
 use dyn_wall_rs::{
     auto_time_setup, check_dir_exists, config::Args, create_data_file, get_curr_back,
     print_schedule, sun_timings, time_track::Time, update_wallpaper_days, wallpaper_listener,
 };
 use std::env;
 use std::fs::canonicalize;
-use structopt::StructOpt;
 use walkdir::WalkDir;
 
 pub mod config;
@@ -35,8 +34,7 @@ pub mod time_track;
 fn main() {
     //convert to clap to add setting to print help message if no argument sent
     //and make help message order same as Args struct order
-    let clap = Args::clap().setting(AppSettings::DeriveDisplayOrder);
-    let cli_args = Args::from_clap(&clap.get_matches());
+    let cli_args = Args::parse();
     let cli_args_used = !(Args::default() == cli_args);
     //min depth of what files should be looked at, will remain as 1 if not syncing with sun, will
     //change to 2 if syncing with sun to ignore the directory names, focusing just on the files

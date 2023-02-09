@@ -23,8 +23,7 @@ alphanumeric-sort = "1.4.4"
 run_script = "0.10.0"
 unicase = "2.6.0"
 winapi = { version = "0.3.9", features = ["winuser"] }
-structopt = "0.3.26"
-clap = "2.34.0"
+clap = { version = "4.1.4", features = ["derive"] }
 serde = { version = "1.0.152", features = ["derive"] }
 toml = "0.5.11"
 sun-times = "0.1.2"

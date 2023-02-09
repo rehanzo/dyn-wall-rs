@@ -19,6 +19,7 @@
 */
 
 use crate::{check_dir_exists, sun_timings, ConfigFileErrors, Errors, Time};
+use clap::Parser;
 use dirs_next::config_dir;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -28,42 +29,39 @@ use std::{
     io::{Read, Write},
     str::FromStr,
 };
-use structopt::StructOpt;
 
-#[derive(StructOpt, Default)]
-#[structopt(
-    about = "Helps user set a dynamic wallpaper and lockscreen. Make sure the wallpapers are named in numerical order based on the order you want. For more info and help, go to https://github.com/RAR27/dyn-wall-rs"
-)]
+#[derive(Parser, Default)]
+#[command(author, version, about = "Helps user set a dynamic wallpaper and lockscreen. Make sure the wallpapers are named in numerical order based on the order you want. For more info and help, go to https://github.com/RAR27/dyn-wall-rs", long_about = None)]
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct Args {
-    #[structopt(
+    #[arg(
         short,
         long,
         value_name = "DIRECTORY",
         help = "Sets the wallpaper based on the current time and changes the wallpaper throughout the day. The wallpaper will change based on the user specified times within the config file, if custom timings are not set, or if location isn't specified, it will automatically divide the wallpapers into equal parts throughout the day.",
-        conflicts_with = "Schedule"
+        conflicts_with = "schedule"
     )]
     pub directory: Option<String>,
 
-    #[structopt(
-        short = "p",
+    #[arg(
+        short = 'p',
         long = "programs",
         value_name = "COMMAND",
         help = r#"Sends image as argument to command specified. Use alongside the directory option. If the command itself contains arguments, wrap in quotation ex. dyn-wall-rs -a /path/to/dir -l "betterlockscreen -u""#
     )]
     pub programs: Option<Vec<String>>,
 
-    #[structopt(
+    #[arg(
         short,
         long,
         help = "Prints change schedule. Use alongside directory option",
         //requires = "directory",
-        takes_value = false,
+        num_args = 0,
     )]
     #[serde(skip)]
     pub schedule: bool,
 
-    #[structopt(
+    #[arg(
         short,
         long,
         value_name = "BACKEND",
@@ -71,7 +69,7 @@ pub struct Args {
     )]
     pub backend: Option<String>,
 
-    #[structopt(
+    #[arg(
         long,
         value_name = "LATITUDE",
         help = "Latitude of current location. Requires the use of the long option",
@@ -80,7 +78,7 @@ pub struct Args {
     )]
     pub lat: Option<f64>,
 
-    #[structopt(
+    #[arg(
         long,
         value_name = "LONGITUDE",
         help = "Longitude of current location. Requires the use of the lat option",
@@ -89,7 +87,7 @@ pub struct Args {
     )]
     pub long: Option<f64>,
 
-    #[structopt(
+    #[arg(
         long,
         value_name = "ELEVATION",
         help = "Elevation of current location. Optional. expressed in meters above sea level.",
@@ -98,23 +96,24 @@ pub struct Args {
     )]
     pub elevation: Option<f64>,
 
-    #[structopt(
-        short = "i",
+    #[arg(
+        short = 'i',
+        long,
         value_name = "DAYS",
         help = "Days between wallpaper changes"
     )]
     pub days: Option<u32>,
 
-    #[structopt(
-        short = "c",
+    #[arg(
+        short = 'c',
         long = "current",
         help = "Returns currently set wallpaper filepath",
-        takes_value = false
+        num_args = 0
     )]
     #[serde(skip)]
     pub ret_curr_wp: bool,
 
-    #[structopt(skip)]
+    #[arg(skip)]
     #[serde(skip)]
     pub times: Option<Vec<Time>>,
 }
