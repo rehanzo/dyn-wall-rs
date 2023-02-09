@@ -35,6 +35,7 @@ use std::{
 };
 use walkdir::{DirEntry, WalkDir};
 
+use clokwerk::Job;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use run_script::ScriptOptions;
@@ -146,7 +147,7 @@ pub fn wallpaper_current_time(
 
 pub fn wallpaper_listener(dir: String, args: Args, min_depth: usize) -> Result<(), Box<dyn Error>> {
     let mut scheduler = Scheduler::new();
-    let mut sched_addto: &mut clokwerk::Job;
+    let mut sched_addto;
     let progs = Arc::new(args.programs);
     let backend = Arc::new(args.backend);
     let times = args.times.unwrap();
