@@ -16,17 +16,17 @@ exclude = [
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-chrono = "0.4.19"
+chrono = "0.4.23"
 clokwerk = "0.3.5"
 walkdir = "2.3.2"
-alphanumeric-sort = "1.4.3"
+alphanumeric-sort = "1.4.4"
 run_script = "0.8.0"
 unicase = "2.6.0"
 winapi = { version = "0.3.9", features = ["winuser"] }
-structopt = "0.3.21"
-clap = "2.33.3"
-serde = { version = "1.0.126", features = ["derive"] }
-toml = "0.5.8"
+structopt = "0.3.26"
+clap = "2.34.0"
+serde = { version = "1.0.152", features = ["derive"] }
+toml = "0.5.11"
 sun-times = "0.1.2"
 dirs-next = "2.0.0"
 rand = "0.8.5"
