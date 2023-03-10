@@ -64,11 +64,13 @@ fn main() {
                     let dir_count = WalkDir::new(dir).min_depth(min_depth).into_iter().count();
                     let dir = canonicalize(dir).expect("Failed to canonicalize");
                     let dir = dir.to_str().expect("Couldn't convert to string");
+                    create_data_file("curr").unwrap();
 
                     if args.days.is_some() {
                         let times: Vec<Time> = vec![Time::default()];
                         args.times = Some(times);
-                        if create_data_file().unwrap() || env::var("DYN_TEST").is_ok() {
+                        if create_data_file("visited_days").unwrap() || env::var("DYN_TEST").is_ok()
+                        {
                             update_wallpaper_days(dir).unwrap();
                         }
                     } else if args.times.is_none() {

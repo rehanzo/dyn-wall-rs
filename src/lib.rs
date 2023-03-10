@@ -192,8 +192,9 @@ pub fn wallpaper_listener(dir: String, args: Args, min_depth: usize) -> Result<(
         sched_addto.run(sched_closure);
     } else {
         sched_addto = scheduler.every(days_val.day()).at("00:00");
-        let curr_fp = file_data_load()?.into_iter().last().unwrap();
+        let curr_fp = file_data_load("visited_days")?.into_iter().last().unwrap();
         set_wallpaper(&curr_fp, Arc::clone(&progs), Arc::clone(&backend))?;
+        file_data_save(curr_fp.as_str(), "curr").unwrap();
 
         let sched_closure = move || {
             // append new chosen file name to the file
@@ -208,6 +209,7 @@ pub fn wallpaper_listener(dir: String, args: Args, min_depth: usize) -> Result<(
                 }
             };
             set_wallpaper(&filepath_set, Arc::clone(&progs), Arc::clone(&backend)).unwrap();
+            file_data_save(&filepath_set, "curr").unwrap();
         };
         sched_addto.run(sched_closure);
     }
@@ -634,12 +636,13 @@ pub fn check_dir_exists(dir: &str) -> Result<(), Errors> {
     }
 }
 
-pub fn file_data_load() -> Result<Vec<String>, Box<dyn Error>> {
+pub fn file_data_load(filename: &str) -> Result<Vec<String>, Box<dyn Error>> {
     let data_dir = data_dir().unwrap();
     create_dir_all(format!("{}/dyn-wall-rs", data_dir.to_str().unwrap()))?;
     let data_file = File::open(format!(
-        "{}/dyn-wall-rs/visited",
-        data_dir.to_str().unwrap()
+        "{}/dyn-wall-rs/{}",
+        data_dir.to_str().unwrap(),
+        filename
     ));
 
     let mut data_file = data_file?;
@@ -652,11 +655,11 @@ pub fn file_data_load() -> Result<Vec<String>, Box<dyn Error>> {
     Ok(splitted)
 }
 
-pub fn file_data_save(contents: &str) -> Result<(), Box<dyn Error>> {
+pub fn file_data_save(contents: &str, filename: &str) -> Result<(), Box<dyn Error>> {
     let data_dir = data_dir().unwrap();
     let data_dir = data_dir.to_str().unwrap();
     println!("{}", data_dir);
-    let filepath = format!("{}/dyn-wall-rs/visited", data_dir);
+    let filepath = format!("{}/dyn-wall-rs/{}", data_dir, filename);
     let mut data_file = OpenOptions::new().write(true).append(true).open(filepath)?;
     let newlined = contents.to_string() + "\n";
 
@@ -665,19 +668,21 @@ pub fn file_data_save(contents: &str) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-pub fn create_data_file() -> Result<bool, Box<dyn Error>> {
+pub fn create_data_file(filename: &str) -> Result<bool, Box<dyn Error>> {
     let mut ret: bool = false;
     let data_dir = data_dir().unwrap();
     create_dir_all(format!("{}/dyn-wall-rs", data_dir.to_str().unwrap()))?;
     let mut data_file = File::open(format!(
-        "{}/dyn-wall-rs/visited",
-        data_dir.to_str().unwrap()
+        "{}/dyn-wall-rs/{}",
+        data_dir.to_str().unwrap(),
+        filename
     ));
     if data_file.is_err() {
         ret = true;
         data_file = File::create(format!(
-            "{}/dyn-wall-rs/visited",
-            data_dir.to_str().unwrap()
+            "{}/dyn-wall-rs/{}",
+            data_dir.to_str().unwrap(),
+            filename
         ));
         let mut data_file = data_file?;
         let contents = "";
@@ -687,11 +692,11 @@ pub fn create_data_file() -> Result<bool, Box<dyn Error>> {
     Ok(ret)
 }
 
-pub fn reset_file() -> Result<(), Box<dyn Error>> {
+pub fn reset_file(filename: &str) -> Result<(), Box<dyn Error>> {
     let data_dir = data_dir().unwrap();
-    let filepath = format!("{}/dyn-wall-rs/visited", data_dir.to_str().unwrap());
+    let filepath = format!("{}/dyn-wall-rs/{}", data_dir.to_str().unwrap(), filename);
     fs::remove_file(filepath)?;
-    create_data_file()?;
+    create_data_file(filename)?;
     Ok(())
 }
 
@@ -731,7 +736,7 @@ pub fn update_wallpaper_days(dir: &str) -> Result<String, Box<dyn Error>> {
     let dir_iter = dir_vector.into_iter();
 
     let mut filepath_set: String = String::new();
-    let old = file_data_load()?;
+    let old = file_data_load("visited_days")?;
 
     for file in dir_iter {
         let filepath = file?;
@@ -746,14 +751,14 @@ pub fn update_wallpaper_days(dir: &str) -> Result<String, Box<dyn Error>> {
     // if we didn't encounter file that hasn't been visited,
     // this means all have been visited, and so we need to reset
     if filepath_set.is_empty() {
-        reset_file()?;
+        reset_file("visited_days")?;
         let temp = sorted_dir_iter(dir, 1).next().unwrap();
         filepath_set.push_str(temp?.path().to_str().unwrap());
     }
-    file_data_save(&filepath_set)?;
+    file_data_save(&filepath_set, "visited_days")?;
     Ok(filepath_set)
 }
 
 pub fn get_curr_back() -> Result<String, Box<dyn Error>> {
-    Ok(file_data_load()?.into_iter().last().unwrap())
+    Ok(file_data_load("curr")?.into_iter().last().unwrap())
 }
