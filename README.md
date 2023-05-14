@@ -25,7 +25,7 @@ For those using Arch Linux you can find the package on the AUR [here](https://au
 ```
 yay -S dyn-wall-rs
 ```
-**Looking for maintainer for the AUR package. Email me at rehanalirana@tuta.io if you are interested.**
+**Looking for maintainer for the AUR package. Email me at rar27@tuta.io if you are interested.**
 
 ### Cargo
 First, install rust, and then run the following command:
